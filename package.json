@@ -12,9 +12,12 @@
   "license": "ISC",
   "devDependencies": {
     "@boringcrypto/boring-solidity": "boringcrypto/BoringSolidity#e06e943",
-    "prettier": "^1.19.1",
-    "prettier-plugin-solidity": "^1.0.0-beta.1",
-    "solhint": "^3.0.0",
+    "prettier": "1.19.1",
+    "prettier-plugin-solidity": "1.0.0-beta.1",
+    "solhint": "3.0.0",
     "truffle": "^5.3.9"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.4.1"
   }
 }

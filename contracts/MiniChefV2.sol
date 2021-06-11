@@ -64,6 +64,9 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     uint256 public sushiPerSecond;
     uint256 private constant ACC_SUSHI_PRECISION = 1e12;
 
+    // @notice Factory address
+    address public immutable factory;
+
     event Deposit(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
     event Withdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
     event EmergencyWithdraw(address indexed user, uint256 indexed pid, uint256 amount, address indexed to);
@@ -76,6 +79,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @param _sushi The SUSHI token contract address.
     constructor(IERC20 _sushi) public {
         SUSHI = _sushi;
+        factory = msg.sender;
     }
 
     /// @notice Returns the number of MCV2 pools.
