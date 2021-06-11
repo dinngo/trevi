@@ -1,0 +1,20 @@
+{
+  "name": "unichef",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint:solhint": "solhint \"contracts/**/*.sol\"",
+    "lint:prettier": "scripts/prettier.sh"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@boringcrypto/boring-solidity": "boringcrypto/BoringSolidity#e06e943",
+    "prettier": "^1.19.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.1",
+    "solhint": "^3.0.0",
+    "truffle": "^5.3.9"
+  }
+}
