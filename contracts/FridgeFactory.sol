@@ -16,6 +16,13 @@ contract FridgeFactory {
         manager = IManager(msg.sender);
     }
 
+    // Getters
+    function isValid(Fridge fridge) external view returns (bool) {
+        IERC20 token = fridge.stakingToken();
+
+        return (_fridges[token] == fridge);
+    }
+
     function fridgeOf(IERC20 token) external view returns (Fridge) {
         return _fridges[token];
     }

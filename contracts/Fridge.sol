@@ -3,14 +3,14 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./sushiswap/interfaces/IMiniChefV2.sol";
 import "./interfaces/IFridge.sol";
 
 /// @title Staking vault of lpTokens
-contract Fridge is ERC20 {
+contract Fridge is ERC20Permit {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -32,7 +32,7 @@ contract Fridge is ERC20 {
         IERC20 token,
         string memory name_,
         string memory symbol_
-    ) public ERC20(name_, symbol_) {
+    ) public ERC20(name_, symbol_) ERC20Permit(name_) {
         stakingToken = token;
     }
 
