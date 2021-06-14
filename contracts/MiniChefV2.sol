@@ -3,20 +3,20 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./boringcrypto/libraries/BoringMath.sol";
-import "./boringcrypto/BoringBatchable.sol";
-import "./boringcrypto/BoringOwnable.sol";
+import "./libraries/boringcrypto/libraries/BoringMath.sol";
+import "./libraries/boringcrypto/BoringBatchable.sol";
+import "./libraries/boringcrypto/BoringOwnable.sol";
 import "./libraries/SignedSafeMath.sol";
 import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
-import "../interfaces/IChefFactory.sol";
-import "../interfaces/IManager.sol";
-import "../interfaces/IFridge.sol";
+import "./interfaces/IChefFactory.sol";
+import "./interfaces/IManager.sol";
+import "./interfaces/IFridge.sol";
 
 interface IMigratorChef {
     // Take the current LP token address and return the new LP token address.
     // Migrator should have full access to the caller's LP token.
-    function migrate(IBERC20 token) external returns (IBERC20);
+    function migrate(IERC20 token) external returns (IERC20);
 }
 
 /// @notice The (older) MasterChef contract gives out a constant number of SUSHI tokens per block.
@@ -27,7 +27,7 @@ interface IMigratorChef {
 contract MiniChefV2 is BoringOwnable, BoringBatchable {
     using BoringMath for uint256;
     using BoringMath128 for uint128;
-    using BoringERC20 for IBERC20;
+    using BoringERC20 for IERC20;
     using SignedSafeMath for int256;
 
     /// @notice Info of each MCV2 user.
@@ -48,14 +48,14 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     }
 
     /// @notice Address of SUSHI contract.
-    IBERC20 public immutable SUSHI;
+    IERC20 public immutable SUSHI;
     // @notice The migrator contract. It has a lot of power. Can only be set through governance (owner).
     IMigratorChef public migrator;
 
     /// @notice Info of each MCV2 pool.
     PoolInfo[] public poolInfo;
     /// @notice Address of the LP token for each MCV2 pool.
-    IBERC20[] public lpToken;
+    IERC20[] public lpToken;
     /// @notice Address of each `IRewarder` contract in MCV2.
     IRewarder[] public rewarder;
 
@@ -93,7 +93,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     event LogPoolAddition(
         uint256 indexed pid,
         uint256 allocPoint,
-        IBERC20 indexed lpToken,
+        IERC20 indexed lpToken,
         IRewarder indexed rewarder
     );
     event LogSetPool(
@@ -115,7 +115,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     }
 
     /// @param _sushi The SUSHI token contract address.
-    constructor(IBERC20 _sushi) public {
+    constructor(IERC20 _sushi) public {
         SUSHI = _sushi;
         IChefFactory _f = IChefFactory(msg.sender);
         factory = _f;
@@ -134,7 +134,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @param _rewarder Address of the rewarder delegate.
     function add(
         uint256 allocPoint,
-        IBERC20 _lpToken,
+        IERC20 _lpToken,
         IRewarder _rewarder
     ) public onlyOwner {
         uint256 pid = lpToken.length;
@@ -204,10 +204,10 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             address(migrator) != address(0),
             "MasterChefV2: no migrator set"
         );
-        IBERC20 _lpToken = lpToken[_pid];
+        IERC20 _lpToken = lpToken[_pid];
         uint256 bal = _lpToken.balanceOf(address(this));
         _lpToken.approve(address(migrator), bal);
-        IBERC20 newLpToken = migrator.migrate(_lpToken);
+        IERC20 newLpToken = migrator.migrate(_lpToken);
         require(
             bal == newLpToken.balanceOf(address(this)),
             "MasterChefV2: migrated balance must match"

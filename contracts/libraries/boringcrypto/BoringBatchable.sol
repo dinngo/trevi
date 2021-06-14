@@ -56,7 +56,7 @@ contract BoringBatchable is BaseBoringBatchable {
     //     if part of a batch this could be used to grief once as the second call would not need the permit
     // C1 - C21: OK
     function permitToken(
-        IBERC20 token,
+        IERC20Permit token,
         address from,
         address to,
         uint256 amount,

@@ -3,10 +3,10 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/drafts/ERC20Permit.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./sushiswap/interfaces/IMiniChefV2.sol";
+import "./libraries/ERC20Permit.sol";
+import "./libraries/SafeERC20.sol";
+import "./libraries/SafeMath.sol";
+import "./interfaces/IMiniChefV2.sol";
 import "./interfaces/IFridge.sol";
 
 /// @title Staking vault of lpTokens

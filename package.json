@@ -16,7 +16,5 @@
     "solhint": "3.0.0",
     "truffle": "^5.3.9"
   },
-  "dependencies": {
-    "@openzeppelin/contracts": "^3.4.1"
-  }
+  "dependencies": {}
 }

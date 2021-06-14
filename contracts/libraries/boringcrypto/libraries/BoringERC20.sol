@@ -1,29 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.12;
 
-import "../interfaces/IBERC20.sol";
+import "../../interfaces/IERC20.sol";
+import "../../interfaces/IERC20Permit.sol";
 
 library BoringERC20 {
-    function safeSymbol(IBERC20 token) internal view returns (string memory) {
+    function safeSymbol(IERC20 token) internal view returns (string memory) {
         (bool success, bytes memory data) =
             address(token).staticcall(abi.encodeWithSelector(0x95d89b41));
         return success && data.length > 0 ? abi.decode(data, (string)) : "???";
     }
 
-    function safeName(IBERC20 token) internal view returns (string memory) {
+    function safeName(IERC20 token) internal view returns (string memory) {
         (bool success, bytes memory data) =
             address(token).staticcall(abi.encodeWithSelector(0x06fdde03));
         return success && data.length > 0 ? abi.decode(data, (string)) : "???";
     }
 
-    function safeDecimals(IBERC20 token) internal view returns (uint8) {
+    function safeDecimals(IERC20 token) internal view returns (uint8) {
         (bool success, bytes memory data) =
             address(token).staticcall(abi.encodeWithSelector(0x313ce567));
         return success && data.length == 32 ? abi.decode(data, (uint8)) : 18;
     }
 
     function safeTransfer(
-        IBERC20 token,
+        IERC20 token,
         address to,
         uint256 amount
     ) internal {
@@ -36,7 +37,7 @@ library BoringERC20 {
     }
 
     function safeTransferFrom(
-        IBERC20 token,
+        IERC20 token,
         address from,
         address to,
         uint256 amount
