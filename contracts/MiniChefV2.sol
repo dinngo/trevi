@@ -67,7 +67,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     uint256 public sushiPerSecond;
     uint256 private constant ACC_SUSHI_PRECISION = 1e12;
 
-    // @notice Factory address
+    ////////////////////////// New
     IManager public immutable manager;
     IChefFactory public immutable factory;
 
@@ -110,6 +110,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     );
     event LogSushiPerSecond(uint256 sushiPerSecond);
 
+    // TODO: Add onlyFridge verification
     modifier onlyFridge() {
         _;
     }
@@ -152,6 +153,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         );
         emit LogPoolAddition(pid, allocPoint, _lpToken, _rewarder);
 
+        ////////////////////////// New
         // Update pid in fridge
         if (address(_lpToken) == address(0)) return;
         IFridge fridge = IFridge(manager.getFridge(address(_lpToken)));
@@ -194,12 +196,16 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @notice Set the `migrator` contract. Can only be called by the owner.
     /// @param _migrator The contract address to set.
     function setMigrator(IMigratorChef _migrator) public onlyOwner {
+        // Disable migrate related functions
+        revert("no migrate");
         migrator = _migrator;
     }
 
     /// @notice Migrate LP token to another LP contract through the `migrator` contract.
     /// @param _pid The index of the pool. See `poolInfo`.
     function migrate(uint256 _pid) public {
+        // Disable migrate related functions
+        revert("no migrate");
         require(
             address(migrator) != address(0),
             "MasterChefV2: no migrator set"
@@ -227,6 +233,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         PoolInfo memory pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
         uint256 accSushiPerShare = pool.accSushiPerShare;
+        ////////////////////////// New
         // uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
         // Need to get the lpSupply from fridge
         IFridge fridge = IFridge(manager.getFridge(address(lpToken[_pid])));
@@ -261,6 +268,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     function updatePool(uint256 pid) public returns (PoolInfo memory pool) {
         pool = poolInfo[pid];
         if (block.timestamp > pool.lastRewardTime) {
+            ////////////////////////// New
             // uint256 lpSupply = lpToken[pid].balanceOf(address(this));
             // Need to get the lpSupply from fridge
             IFridge fridge = IFridge(manager.getFridge(address(lpToken[pid])));
@@ -309,6 +317,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             _rewarder.onSushiReward(pid, to, to, 0, user.amount);
         }
 
+        ////////////////////////// New
         // Handle in fridge
         // lpToken[pid].safeTransferFrom(msg.sender, address(this), amount);
 
@@ -326,6 +335,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         address to
     ) public onlyFridge {
         PoolInfo memory pool = updatePool(pid);
+        ////////////////////////// New
         // Delegate by fridge
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
@@ -339,11 +349,13 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         // Interactions
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
+            ////////////////////////// New
             // Delegate by fridge
             // _rewarder.onSushiReward(pid, msg.sender, to, 0, user.amount);
             _rewarder.onSushiReward(pid, to, to, 0, user.amount);
         }
 
+        ////////////////////////// New
         // Handle in fridge
         // lpToken[pid].safeTransfer(to, amount);
 
@@ -356,6 +368,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @param to Receiver of SUSHI rewards.
     function harvest(uint256 pid, address to) public onlyFridge {
         PoolInfo memory pool = updatePool(pid);
+        ////////////////////////// New
         // Delegate by fridge
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
@@ -378,6 +391,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         if (address(_rewarder) != address(0)) {
             _rewarder.onSushiReward(
                 pid,
+                ////////////////////////// New
                 // Delegate by fridge
                 // msg.sender,
                 to,
@@ -387,6 +401,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             );
         }
 
+        ////////////////////////// New
         // emit Harvest(msg.sender, pid, _pendingSushi);
         emit Harvest(to, pid, _pendingSushi);
     }
@@ -401,6 +416,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         address to
     ) public onlyFridge {
         PoolInfo memory pool = updatePool(pid);
+        ////////////////////////// New
         // Delegate by fridge
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
@@ -424,6 +440,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         if (address(_rewarder) != address(0)) {
             _rewarder.onSushiReward(
                 pid,
+                ////////////////////////// New
                 // Delegate by fridge
                 // msg.sender,
                 to,
@@ -433,6 +450,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             );
         }
 
+        ////////////////////////// New
         // Handle in fridge
         // lpToken[pid].safeTransfer(to, amount);
 
@@ -446,6 +464,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of the LP tokens.
     function emergencyWithdraw(uint256 pid, address to) public onlyFridge {
+        ////////////////////////// New
         // Delegate by fridge
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
@@ -455,12 +474,14 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
 
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
+            ////////////////////////// New
             // Delegate by fridge
             // _rewarder.onSushiReward(pid, msg.sender, to, 0, 0);
             _rewarder.onSushiReward(pid, to, to, 0, 0);
         }
 
         // Note: transfer can fail or succeed if `amount` is zero.
+        ////////////////////////// New
         // Handle in fridge
         // lpToken[pid].safeTransfer(to, amount);
         // emit EmergencyWithdraw(msg.sender, pid, amount, to);

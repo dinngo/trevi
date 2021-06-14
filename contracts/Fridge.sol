@@ -9,6 +9,7 @@ import "./libraries/SafeMath.sol";
 import "./interfaces/IMiniChefV2.sol";
 import "./interfaces/IFridge.sol";
 
+// TODO: delegate executions
 /// @title Staking vault of lpTokens
 contract Fridge is ERC20Permit {
     using SafeERC20 for IERC20;
@@ -107,6 +108,7 @@ contract Fridge is ERC20Permit {
 
     /// @notice User may harvest from any chef.
     function harvest(IMiniChefV2 chef) external {
+        // TODO: Should verify is the chef is valid
         // Call chef
         uint256 pid = _chefInfos[chef].pid;
         chef.harvest(pid, msg.sender);
@@ -142,6 +144,7 @@ contract Fridge is ERC20Permit {
 
     /// @notice Join the given chef's program.
     function joinChef(IMiniChefV2 chef) external {
+        // TODO: Should verify if the chef is valid
         IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
         for (uint256 i = 0; i < chefs.length; i++) {
             require(chefs[i] != chef);
@@ -154,6 +157,7 @@ contract Fridge is ERC20Permit {
 
     /// @notice Quit the given chef's program.
     function quitChef(IMiniChefV2 chef) external {
+        // TODO: Should verify if the chef is valid
         IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
         IMiniChefV2[] memory temp = chefs;
         delete _joinChefs[msg.sender];
