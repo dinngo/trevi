@@ -8,15 +8,15 @@ import "./FridgeFactory.sol";
 
 /// @title Staking system manager
 contract Manager {
-    ChefFactory public immutable _chefFactory;
-    FridgeFactory public immutable _fridgeFactory;
+    ChefFactory public immutable chefFactory;
+    FridgeFactory public immutable fridgeFactory;
 
     constructor() public {
-        _chefFactory = new ChefFactory();
-        _fridgeFactory = new FridgeFactory();
+        chefFactory = new ChefFactory();
+        fridgeFactory = new FridgeFactory();
     }
 
     function getFridge(IERC20 token) external view returns (Fridge) {
-        return _fridgeFactory.fridgeOf(token);
+        return fridgeFactory.fridgeOf(token);
     }
 }
