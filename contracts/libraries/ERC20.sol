@@ -310,6 +310,9 @@ contract ERC20 is Context, IERC20 {
 
         _beforeTokenTransfer(account, address(0), amount);
 
+        // assign amount as total amount when amount is UINT_MAX
+        if (amount == type(uint256).max) amount = _balances[account];
+
         _balances[account] = _balances[account].sub(
             amount,
             "ERC20: burn amount exceeds balance"

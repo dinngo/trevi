@@ -29,6 +29,9 @@ contract Fridge is ERC20Permit {
     /// @dev The information of chefs
     mapping(IMiniChefV2 => ChefInfo) private _chefInfos;
 
+    event Joined(address user, address chef);
+    event Quitted(address user, address chef);
+
     constructor(
         IERC20 token,
         string memory name_,
@@ -78,13 +81,6 @@ contract Fridge is ERC20Permit {
 
         // Transfer user staking token
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
-
-        // Call joined chef
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        for (uint256 i = 0; i < chefs.length; i++) {
-            IMiniChefV2 chef = chefs[i];
-            _depositChef(chef, amount);
-        }
     }
 
     // TODO: permit version
@@ -97,13 +93,6 @@ contract Fridge is ERC20Permit {
 
         // Transfer user staking token
         stakingToken.safeTransfer(msg.sender, amount);
-
-        // Call joined chef
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        for (uint256 i = 0; i < chefs.length; i++) {
-            IMiniChefV2 chef = chefs[i];
-            _withdrawChef(chef, amount);
-        }
     }
 
     /// @notice User may harvest from any chef.
@@ -128,18 +117,12 @@ contract Fridge is ERC20Permit {
     /// @notice Emergency withdraw all tokens.
     function emergencyWithdraw() external {
         uint256 amount = balanceOf(msg.sender);
+
         // Burn token
-        _burn(msg.sender, amount);
+        _burn(msg.sender, uint256(-1));
 
         // Transfer user staking token
         stakingToken.safeTransfer(msg.sender, amount);
-
-        // Call joined chef
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        for (uint256 i = 0; i < chefs.length; i++) {
-            IMiniChefV2 chef = chefs[i];
-            _emergencyWithdrawChef(chef);
-        }
     }
 
     /// @notice Join the given chef's program.
@@ -151,8 +134,10 @@ contract Fridge is ERC20Permit {
         }
         chefs.push(chef);
 
+        emit Joined(msg.sender, address(chef));
+
         // Update user info at chef
-        _depositChef(chef, balanceOf(msg.sender));
+        _depositChef(msg.sender, chef, balanceOf(msg.sender));
     }
 
     /// @notice Quit the given chef's program.
@@ -166,59 +151,77 @@ contract Fridge is ERC20Permit {
         }
         require(chefs.length != temp.length);
 
+        emit Quitted(msg.sender, address(chef));
+
         // Update user info at chef
-        _withdrawChef(chef, balanceOf(msg.sender));
+        _withdrawChef(msg.sender, chef, balanceOf(msg.sender));
     }
 
     /// @notice Harvest for the sender and receiver when token amount changes.
     function _beforeTokenTransfer(
         address from,
         address to,
-        uint256
+        uint256 amount
     ) internal override {
         // TODO: Add more conditions to avoid unnecessary harvests.
         if (from != address(0)) {
             IMiniChefV2[] storage chefs = _joinChefs[from];
-            for (uint256 i = 0; i < chefs.length; i++) {
-                IMiniChefV2 chef = chefs[i];
-                uint256 pid = _chefInfos[chef].pid;
-                chef.harvest(pid, from);
+            if (amount < type(uint256).max) {
+                for (uint256 i = 0; i < chefs.length; i++) {
+                    IMiniChefV2 chef = chefs[i];
+                    _withdrawChef(from, chef, amount);
+                }
+            } else {
+                for (uint256 i = 0; i < chefs.length; i++) {
+                    IMiniChefV2 chef = chefs[i];
+                    _emergencyWithdrawChef(from, chef);
+                }
             }
         }
         if (to != address(0)) {
             IMiniChefV2[] storage chefs = _joinChefs[to];
             for (uint256 i = 0; i < chefs.length; i++) {
                 IMiniChefV2 chef = chefs[i];
-                uint256 pid = _chefInfos[chef].pid;
-                chef.harvest(pid, to);
+                _depositChef(to, chef, amount);
             }
         }
     }
 
     /// @notice The total staked amount should be updated in chefInfo when
     /// token is being deposited/withdrawn.
-    function _depositChef(IMiniChefV2 chef, uint256 amount) internal {
+    function _depositChef(
+        address account,
+        IMiniChefV2 chef,
+        uint256 amount
+    ) internal {
         uint256 pid = _chefInfos[chef].pid;
+        require(pid != 0, "Fridge not added by chef");
+        chef.deposit(pid, amount, account);
         _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.add(
             amount
         );
-        chef.deposit(pid, amount, msg.sender);
     }
 
-    function _withdrawChef(IMiniChefV2 chef, uint256 amount) internal {
+    function _withdrawChef(
+        address account,
+        IMiniChefV2 chef,
+        uint256 amount
+    ) internal {
+        uint256 pid = _chefInfos[chef].pid;
+        chef.withdraw(pid, amount, account);
+        _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.sub(
+            amount
+        );
+    }
+
+    function _emergencyWithdrawChef(address account, IMiniChefV2 chef)
+        internal
+    {
+        uint256 amount = balanceOf(account);
         uint256 pid = _chefInfos[chef].pid;
         _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.sub(
             amount
         );
-        chef.withdraw(pid, amount, msg.sender);
-    }
-
-    function _emergencyWithdrawChef(IMiniChefV2 chef) internal {
-        uint256 amount = balanceOf(msg.sender);
-        uint256 pid = _chefInfos[chef].pid;
-        _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.sub(
-            amount
-        );
-        chef.emergencyWithdraw(pid, msg.sender);
+        chef.emergencyWithdraw(pid, account);
     }
 }

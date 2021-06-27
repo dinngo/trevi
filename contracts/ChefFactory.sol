@@ -14,6 +14,8 @@ contract ChefFactory {
     IManager public immutable manager;
     mapping(MiniChefV2 => IERC20) private _rewards;
 
+    event Created(address to);
+
     constructor() public {
         manager = IManager(msg.sender);
     }
@@ -34,6 +36,8 @@ contract ChefFactory {
         newChef.add(0, IERC20(address(0)), IRewarder(address(0)));
         newChef.transferOwnership(msg.sender, true, false);
         _rewards[newChef] = reward;
+
+        emit Created(address(newChef));
 
         return newChef;
     }

@@ -12,6 +12,8 @@ contract FridgeFactory {
     /// @dev Token and Fridge should be 1-1 and only
     mapping(IERC20 => Fridge) private _fridges;
 
+    event Created(address to);
+
     constructor() public {
         manager = IManager(msg.sender);
     }
@@ -34,6 +36,8 @@ contract FridgeFactory {
         string memory symbol = _concat("FRG-", token.symbol());
         Fridge fridge = new Fridge(token, name, symbol);
         _fridges[token] = fridge;
+
+        emit Created(address(fridge));
     }
 
     function _concat(string memory a, string memory b)
