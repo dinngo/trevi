@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "truffle compile",
+    "test": "truffle test",
     "lint:solhint": "solhint \"contracts/**/*.sol\"",
     "lint:prettier": "scripts/prettier.sh"
   },
@@ -19,5 +20,10 @@
     "solhint": "3.0.0",
     "truffle": "^5.3.9"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint:prettier && npm run lint:solhint"
+    }
+  }
 }
