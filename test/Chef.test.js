@@ -20,6 +20,7 @@ const FridgeFactory = artifacts.require('FridgeFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 
 describe('MiniChefV2', function() {
+  /*
   before(async function() {
     await prepare(this, [
       'MiniChefV2',
@@ -290,4 +291,5 @@ describe('MiniChefV2', function() {
         .withArgs(this.bob.address, 0, getBigNumber(1), this.bob.address);
     });
   });
+  */
 });

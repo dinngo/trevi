@@ -12,6 +12,8 @@
   "license": "ISC",
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.11",
+    "eth-sig-util": "^3.0.1",
+    "ethereumjs-util": "^7.0.10",
     "prettier": "1.19.1",
     "prettier-plugin-solidity": "1.0.0-beta.1",
     "solhint": "3.0.0",

@@ -30,9 +30,50 @@ contract('Fridge factory', function([_, user]) {
     this.token2 = await SimpleToken.new('Reward', 'RWD', ether('1000000000'));
   });
 
-  describe('Create', function() {});
+  describe('Create', function() {
+    it('normal', async function() {
+      const receipt = await this.fridgeFactory.create(this.token1.address);
+      const fridgeAddress = await this.fridgeFactory.fridgeOf.call(
+        this.token1.address
+      );
+      expectEvent(receipt, 'Created', { to: fridgeAddress });
+    });
 
-  describe('Is valid', function() {});
+    it('should revert if existed', async function() {
+      await this.fridgeFactory.create(this.token1.address);
+      await expectRevert(
+        this.fridgeFactory.create(this.token1.address),
+        'fridge existed'
+      );
+    });
+  });
 
-  describe('Fridge of', function() {});
+  describe('Is valid', function() {
+    it('created by factory', async function() {
+      await this.fridgeFactory.create(this.token1.address);
+      const fridgeAddress = await this.fridgeFactory.fridgeOf.call(
+        this.token1.address
+      );
+      expect(await this.fridgeFactory.isValid(fridgeAddress)).to.be.true;
+    });
+
+    it('not created by factory', async function() {
+      const fridge = await Fridge.new(this.token1.address, 'TEST', 'TST');
+      expect(await this.fridgeFactory.isValid(fridge.address)).to.be.false;
+    });
+  });
+
+  describe('Fridge of', function() {
+    it('normal', async function() {
+      let fridgeAddress = await this.fridgeFactory.fridgeOf.call(
+        this.token1.address
+      );
+      expect(fridgeAddress).eq(ZERO_ADDRESS);
+      await this.fridgeFactory.create(this.token1.address);
+      fridgeAddress = await this.fridgeFactory.fridgeOf.call(
+        this.token1.address
+      );
+      expect(fridgeAddress).not.eq(ZERO_ADDRESS);
+    });
+  });
 });
