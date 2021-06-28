@@ -179,7 +179,7 @@ contract('MiniChefV2', function([_, user, rewarder]) {
 
     it('Updating invalid pools should fail', async function() {
       await expectRevert(
-        this.chef.massUpdatePools([0, 10000, 100000]),
+        this.chef.massUpdatePools([10000, 100000]),
         'invalid opcode'
       );
     });

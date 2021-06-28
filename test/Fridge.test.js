@@ -264,7 +264,7 @@ contract('Fridge', function([_, user, someone, rewarder]) {
         const pending = await this.chef1.pendingSushi.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(ether('0'));
-        expect(info1[1]).to.be.bignumber.gte(ether('0').sub(pendingBefore));
+        expect(ether('0').sub(info1[1])).to.be.bignumber.gte(pendingBefore);
         expect(pending).to.be.bignumber.eq(pendingBefore);
         expect(await this.rwdToken1.balanceOf.call(user)).to.be.bignumber.eq(
           ether('0')
