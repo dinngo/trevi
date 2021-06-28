@@ -15,6 +15,7 @@ const utils = web3.utils;
 const ethSigUtil = require('eth-sig-util');
 const { fromRpcSig } = require('ethereumjs-util');
 const { EIP712Domain, domainSeparator } = require('./helpers/eip712');
+const { getCreated } = require('./helpers/utils');
 
 const { expect } = require('chai');
 
@@ -32,10 +33,6 @@ const Permit = [
   { name: 'nonce', type: 'uint256' },
   { name: 'deadline', type: 'uint256' },
 ];
-
-async function getCreated(receipt, contract) {
-  return await contract.at(receipt.logs[0].args.to);
-}
 
 contract('Fridge', function([_, user, someone, rewarder]) {
   beforeEach(async function() {
