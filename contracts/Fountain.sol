@@ -64,7 +64,7 @@ contract Fountain is FountainToken {
     }
 
     // User action
-    /// @notice User may deposit their lp token. FRG token will be minted.
+    /// @notice User may deposit their lp token. FTN token will be minted.
     /// Fountain will call angel's deposit to update user information, but the tokens
     /// stay in Fountain.
     function deposit(uint256 amount) external {
@@ -75,8 +75,7 @@ contract Fountain is FountainToken {
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
     }
 
-    // TODO: permit version
-    /// @notice User may withdraw their lp token. FRG token will be burned.
+    /// @notice User may withdraw their lp token. FTN token will be burned.
     /// Fountain will call angel's withdraw to update user information, but the tokens
     /// will be transferred from Fountain.
     function withdraw(uint256 amount) external {
@@ -149,13 +148,14 @@ contract Fountain is FountainToken {
         _withdrawAngel(msg.sender, angel, balanceOf(msg.sender));
     }
 
-    /// @notice Harvest for the sender and receiver when token amount changes.
+    /// @notice Withdraw for the sender and deposit for the receiver
+    /// when token amount changes. When the amount is UINT256_MAX,
+    /// trigger emergencyWithdraw instead of withdraw.
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal override {
-        // TODO: Add more conditions to avoid unnecessary harvests.
         if (from != address(0)) {
             IAngel[] storage angels = _joinAngels[from];
             if (amount < type(uint256).max) {
