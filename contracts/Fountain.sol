@@ -7,18 +7,18 @@ import "./libraries/ERC20Permit.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./interfaces/IAngel.sol";
-import "./interfaces/IFridge.sol";
+import "./interfaces/IFountain.sol";
 
 // TODO: delegate executions
 /// @title Staking vault of lpTokens
-contract Fridge is ERC20Permit {
+contract Fountain is ERC20Permit {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    /// @notice The staking token of this Fridge
+    /// @notice The staking token of this Fountain
     IERC20 public immutable stakingToken;
 
-    /// @notice The information of angel that is cached in Fridge
+    /// @notice The information of angel that is cached in Fountain
     struct AngelInfo {
         uint256 pid;
         uint256 totalBalance;
@@ -51,7 +51,7 @@ contract Fridge is ERC20Permit {
 
     // Angel action
     /// @notice Angel may set their own pid that matches the staking token
-    /// of the Fridge.
+    /// of the Fountain.
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(msg.sender);
         require(_angelInfos[angel].pid == 0, "Pid is set");
@@ -65,8 +65,8 @@ contract Fridge is ERC20Permit {
 
     // User action
     /// @notice User may deposit their lp token. FRG token will be minted.
-    /// Fridge will call angel's deposit to update user information, but the tokens
-    /// stay in Fridge.
+    /// Fountain will call angel's deposit to update user information, but the tokens
+    /// stay in Fountain.
     function deposit(uint256 amount) external {
         // Mint token
         _mint(msg.sender, amount);
@@ -77,8 +77,8 @@ contract Fridge is ERC20Permit {
 
     // TODO: permit version
     /// @notice User may withdraw their lp token. FRG token will be burned.
-    /// Fridge will call angel's withdraw to update user information, but the tokens
-    /// will be transferred from Fridge.
+    /// Fountain will call angel's withdraw to update user information, but the tokens
+    /// will be transferred from Fountain.
     function withdraw(uint256 amount) external {
         // Burn token
         _burn(msg.sender, amount);
@@ -187,7 +187,7 @@ contract Fridge is ERC20Permit {
         uint256 amount
     ) internal {
         uint256 pid = _angelInfos[angel].pid;
-        require(pid != 0, "Fridge not added by angel");
+        require(pid != 0, "Fountain not added by angel");
         angel.deposit(pid, amount, account);
         _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.add(
             amount

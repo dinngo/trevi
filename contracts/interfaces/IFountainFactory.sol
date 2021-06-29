@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-interface IFridgeFactory {
+interface IFountainFactory {
     function create(address token) external returns (address);
-    function fridgeOf(address token) external view returns (address);
+    function fountainOf(address token) external view returns (address);
 }

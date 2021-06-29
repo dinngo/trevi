@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-interface IChefFactory {
+interface IAngelFactory {
     function manager() external view returns (address);
-    function createChef(address rewardToken) external;
+    function create(address rewardToken) external;
 }

@@ -11,7 +11,7 @@ import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
 import "./interfaces/IAngelFactory.sol";
 import "./interfaces/IManager.sol";
-import "./interfaces/IFridge.sol";
+import "./interfaces/IFountain.sol";
 
 interface IMigratorChef {
     // Take the current LP token address and return the new LP token address.
@@ -108,8 +108,8 @@ contract Angel is BoringOwnable, BoringBatchable {
     );
     event LogSushiPerSecond(uint256 sushiPerSecond);
 
-    // TODO: Add onlyFridge verification
-    modifier onlyFridge() {
+    // TODO: Add onlyFountain verification
+    modifier onlyFountain() {
         _;
     }
 
@@ -152,10 +152,10 @@ contract Angel is BoringOwnable, BoringBatchable {
         emit LogPoolAddition(pid, allocPoint, _lpToken, _rewarder);
 
         ////////////////////////// New
-        // Update pid in fridge
+        // Update pid in fountain
         if (address(_lpToken) == address(0)) return;
-        IFridge fridge = IFridge(manager.getFridge(address(_lpToken)));
-        fridge.setPoolId(pid);
+        IFountain fountain = IFountain(manager.getFountain(address(_lpToken)));
+        fountain.setPoolId(pid);
     }
 
     /// @notice Update the given pool's SUSHI allocation point and `IRewarder` contract. Can only be called by the owner.
@@ -233,9 +233,10 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 accSushiPerShare = pool.accSushiPerShare;
         ////////////////////////// New
         // uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
-        // Need to get the lpSupply from fridge
-        IFridge fridge = IFridge(manager.getFridge(address(lpToken[_pid])));
-        (, uint256 lpSupply) = fridge.angelInfo(address(this));
+        // Need to get the lpSupply from fountain
+        IFountain fountain =
+            IFountain(manager.getFountain(address(lpToken[_pid])));
+        (, uint256 lpSupply) = fountain.angelInfo(address(this));
         if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
             uint256 time = block.timestamp.sub(pool.lastRewardTime);
             uint256 sushiReward =
@@ -268,9 +269,10 @@ contract Angel is BoringOwnable, BoringBatchable {
         if (block.timestamp > pool.lastRewardTime) {
             ////////////////////////// New
             // uint256 lpSupply = lpToken[pid].balanceOf(address(this));
-            // Need to get the lpSupply from fridge
-            IFridge fridge = IFridge(manager.getFridge(address(lpToken[pid])));
-            (, uint256 lpSupply) = fridge.angelInfo(address(this));
+            // Need to get the lpSupply from fountain
+            IFountain fountain =
+                IFountain(manager.getFountain(address(lpToken[pid])));
+            (, uint256 lpSupply) = fountain.angelInfo(address(this));
             if (lpSupply > 0) {
                 uint256 time = block.timestamp.sub(pool.lastRewardTime);
                 uint256 sushiReward =
@@ -299,7 +301,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFridge {
+    ) public onlyFountain {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][to];
 
@@ -316,7 +318,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         }
 
         ////////////////////////// New
-        // Handle in fridge
+        // Handle in fountain
         // lpToken[pid].safeTransferFrom(msg.sender, address(this), amount);
 
         // emit Deposit(msg.sender, pid, amount, to);
@@ -331,10 +333,10 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFridge {
+    ) public onlyFountain {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
-        // Delegate by fridge
+        // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
 
@@ -348,13 +350,13 @@ contract Angel is BoringOwnable, BoringBatchable {
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
             ////////////////////////// New
-            // Delegate by fridge
+            // Delegate by fountain
             // _rewarder.onSushiReward(pid, msg.sender, to, 0, user.amount);
             _rewarder.onSushiReward(pid, to, to, 0, user.amount);
         }
 
         ////////////////////////// New
-        // Handle in fridge
+        // Handle in fountain
         // lpToken[pid].safeTransfer(to, amount);
 
         // emit Withdraw(msg.sender, pid, amount, to);
@@ -364,10 +366,10 @@ contract Angel is BoringOwnable, BoringBatchable {
     /// @notice Harvest proceeds for transaction sender to `to`.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of SUSHI rewards.
-    function harvest(uint256 pid, address to) public onlyFridge {
+    function harvest(uint256 pid, address to) public onlyFountain {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
-        // Delegate by fridge
+        // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
         int256 accumulatedSushi =
@@ -390,7 +392,7 @@ contract Angel is BoringOwnable, BoringBatchable {
             _rewarder.onSushiReward(
                 pid,
                 ////////////////////////// New
-                // Delegate by fridge
+                // Delegate by fountain
                 // msg.sender,
                 to,
                 to,
@@ -412,10 +414,10 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFridge {
+    ) public onlyFountain {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
-        // Delegate by fridge
+        // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
         int256 accumulatedSushi =
@@ -439,7 +441,7 @@ contract Angel is BoringOwnable, BoringBatchable {
             _rewarder.onSushiReward(
                 pid,
                 ////////////////////////// New
-                // Delegate by fridge
+                // Delegate by fountain
                 // msg.sender,
                 to,
                 to,
@@ -449,7 +451,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         }
 
         ////////////////////////// New
-        // Handle in fridge
+        // Handle in fountain
         // lpToken[pid].safeTransfer(to, amount);
 
         // emit Withdraw(msg.sender, pid, amount, to);
@@ -461,9 +463,9 @@ contract Angel is BoringOwnable, BoringBatchable {
     /// @notice Withdraw without caring about rewards. EMERGENCY ONLY.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of the LP tokens.
-    function emergencyWithdraw(uint256 pid, address to) public onlyFridge {
+    function emergencyWithdraw(uint256 pid, address to) public onlyFountain {
         ////////////////////////// New
-        // Delegate by fridge
+        // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][to];
         uint256 amount = user.amount;
@@ -473,14 +475,14 @@ contract Angel is BoringOwnable, BoringBatchable {
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
             ////////////////////////// New
-            // Delegate by fridge
+            // Delegate by fountain
             // _rewarder.onSushiReward(pid, msg.sender, to, 0, 0);
             _rewarder.onSushiReward(pid, to, to, 0, 0);
         }
 
         // Note: transfer can fail or succeed if `amount` is zero.
         ////////////////////////// New
-        // Handle in fridge
+        // Handle in fountain
         // lpToken[pid].safeTransfer(to, amount);
         // emit EmergencyWithdraw(msg.sender, pid, amount, to);
         emit EmergencyWithdraw(to, pid, amount, to);

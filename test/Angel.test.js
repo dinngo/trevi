@@ -19,8 +19,8 @@ const { expect } = require('chai');
 const Manager = artifacts.require('Manager');
 const Angel = artifacts.require('Angel');
 const AngelFactory = artifacts.require('AngelFactory');
-const Fridge = artifacts.require('Fridge');
-const FridgeFactory = artifacts.require('FridgeFactory');
+const Fountain = artifacts.require('Fountain');
+const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 const ERC20 = artifacts.require('ERC20');
 const RewarderMock = artifacts.require('RewarderMock');
@@ -29,9 +29,9 @@ contract('Angel', function([_, user, rewarder]) {
   beforeEach(async function() {
     this.manager = await Manager.new();
     const angelFactory = await this.manager.angelFactory.call();
-    const fridgeFactory = await this.manager.fridgeFactory.call();
+    const fountainFactory = await this.manager.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
-    this.fridgeFactory = await FridgeFactory.at(fridgeFactory);
+    this.fountainFactory = await FountainFactory.at(fountainFactory);
     this.stkToken = await SimpleToken.new('Staking', 'STK', ether('1000000'), {
       from: user,
     });
@@ -41,10 +41,10 @@ contract('Angel', function([_, user, rewarder]) {
     this.dummy = await SimpleToken.new('Reward', 'RWD', ether('1000000'), {
       from: rewarder,
     });
-    // create fridge
-    this.fridge = await getCreated(
-      await this.fridgeFactory.create(this.stkToken.address),
-      Fridge
+    // create fountain
+    this.fountain = await getCreated(
+      await this.fountainFactory.create(this.stkToken.address),
+      Fountain
     );
     // create angel
     this.angel = await getCreated(
@@ -135,12 +135,12 @@ contract('Angel', function([_, user, rewarder]) {
         this.rewarder.address,
         { from: rewarder }
       );
-      await this.stkToken.approve(this.fridge.address, new BN('10'), {
+      await this.stkToken.approve(this.fountain.address, new BN('10'), {
         from: user,
       });
-      await this.fridge.joinAngel(this.angel.address, { from: user });
+      await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fridge.deposit(new BN('1'), { from: user });
+      await this.fountain.deposit(new BN('1'), { from: user });
       await increase(seconds(86400));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('1'));
@@ -155,12 +155,12 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
       });
-      await this.stkToken.approve(this.fridge.address, new BN('10'), {
+      await this.stkToken.approve(this.fountain.address, new BN('10'), {
         from: user,
       });
-      await this.fridge.joinAngel(this.angel.address, { from: user });
+      await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fridge.deposit(new BN('1'), { from: user });
+      await this.fountain.deposit(new BN('1'), { from: user });
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('1'));

@@ -4,19 +4,19 @@ pragma solidity 0.6.12;
 
 import "./interfaces/IManager.sol";
 import "./AngelFactory.sol";
-import "./FridgeFactory.sol";
+import "./FountainFactory.sol";
 
 /// @title Staking system manager
 contract Manager {
     AngelFactory public immutable angelFactory;
-    FridgeFactory public immutable fridgeFactory;
+    FountainFactory public immutable fountainFactory;
 
     constructor() public {
         angelFactory = new AngelFactory();
-        fridgeFactory = new FridgeFactory();
+        fountainFactory = new FountainFactory();
     }
 
-    function getFridge(IERC20 token) external view returns (Fridge) {
-        return fridgeFactory.fridgeOf(token);
+    function getFountain(IERC20 token) external view returns (Fountain) {
+        return fountainFactory.fountainOf(token);
     }
 }
