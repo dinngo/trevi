@@ -12,7 +12,7 @@ const utils = web3.utils;
 
 const { expect } = require('chai');
 
-const Manager = artifacts.require('Manager');
+const Archangel = artifacts.require('Archangel');
 const Angel = artifacts.require('Angel');
 const AngelFactory = artifacts.require('AngelFactory');
 const Fountain = artifacts.require('Fountain');
@@ -21,9 +21,9 @@ const SimpleToken = artifacts.require('SimpleToken');
 
 contract('Angel factory', function([_, user]) {
   beforeEach(async function() {
-    this.manager = await Manager.new();
-    const angelFactory = await this.manager.angelFactory.call();
-    const fountainFactory = await this.manager.fountainFactory.call();
+    this.archangel = await Archangel.new();
+    const angelFactory = await this.archangel.angelFactory.call();
+    const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
     this.fountainFactory = await FountainFactory.at(fountainFactory);
     this.token1 = await SimpleToken.new('Staking', 'STK', ether('1000000000'));

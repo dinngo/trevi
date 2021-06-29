@@ -3,19 +3,19 @@
 pragma solidity 0.6.12;
 
 import "./Fountain.sol";
-import "./interfaces/IManager.sol";
+import "./interfaces/IArchangel.sol";
 import "./interfaces/IFountainFactory.sol";
 
 /// @title The factory of Fountain
 contract FountainFactory {
-    IManager public immutable manager;
+    IArchangel public immutable archangel;
     /// @dev Token and Fountain should be 1-1 and only
     mapping(IERC20 => Fountain) private _fountains;
 
     event Created(address to);
 
     constructor() public {
-        manager = IManager(msg.sender);
+        archangel = IArchangel(msg.sender);
     }
 
     // Getters

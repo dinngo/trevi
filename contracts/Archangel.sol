@@ -2,12 +2,12 @@
 
 pragma solidity 0.6.12;
 
-import "./interfaces/IManager.sol";
+import "./interfaces/IArchangel.sol";
 import "./AngelFactory.sol";
 import "./FountainFactory.sol";
 
 /// @title Staking system manager
-contract Manager {
+contract Archangel {
     AngelFactory public immutable angelFactory;
     FountainFactory public immutable fountainFactory;
 

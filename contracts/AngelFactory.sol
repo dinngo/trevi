@@ -11,13 +11,13 @@ contract AngelFactory {
     using BoringERC20 for IERC20;
     using BoringMath for uint256;
 
-    IManager public immutable manager;
+    IArchangel public immutable archangel;
     mapping(Angel => IERC20) private _rewards;
 
     event Created(address to);
 
     constructor() public {
-        manager = IManager(msg.sender);
+        archangel = IArchangel(msg.sender);
     }
 
     function isValid(Angel angel) external view returns (bool) {

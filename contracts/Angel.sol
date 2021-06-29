@@ -10,7 +10,7 @@ import "./libraries/SignedSafeMath.sol";
 import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
 import "./interfaces/IAngelFactory.sol";
-import "./interfaces/IManager.sol";
+import "./interfaces/IArchangel.sol";
 import "./interfaces/IFountain.sol";
 
 interface IMigratorChef {
@@ -66,8 +66,8 @@ contract Angel is BoringOwnable, BoringBatchable {
     uint256 private constant ACC_SUSHI_PRECISION = 1e12;
 
     ////////////////////////// New
-    IManager public immutable manager;
-    IChefFactory public immutable factory;
+    IArchangel public immutable archangel;
+    IAngelFactory public immutable factory;
 
     event Deposit(
         address indexed user,
@@ -116,9 +116,9 @@ contract Angel is BoringOwnable, BoringBatchable {
     /// @param _sushi The SUSHI token contract address.
     constructor(IERC20 _sushi) public {
         SUSHI = _sushi;
-        IChefFactory _f = IChefFactory(msg.sender);
+        IAngelFactory _f = IAngelFactory(msg.sender);
         factory = _f;
-        manager = IManager(_f.manager());
+        archangel = IArchangel(_f.archangel());
     }
 
     /// @notice Returns the number of MCV2 pools.
@@ -154,7 +154,8 @@ contract Angel is BoringOwnable, BoringBatchable {
         ////////////////////////// New
         // Update pid in fountain
         if (address(_lpToken) == address(0)) return;
-        IFountain fountain = IFountain(manager.getFountain(address(_lpToken)));
+        IFountain fountain =
+            IFountain(archangel.getFountain(address(_lpToken)));
         fountain.setPoolId(pid);
     }
 
@@ -235,7 +236,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         // uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
         // Need to get the lpSupply from fountain
         IFountain fountain =
-            IFountain(manager.getFountain(address(lpToken[_pid])));
+            IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
         if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
             uint256 time = block.timestamp.sub(pool.lastRewardTime);
@@ -271,7 +272,7 @@ contract Angel is BoringOwnable, BoringBatchable {
             // uint256 lpSupply = lpToken[pid].balanceOf(address(this));
             // Need to get the lpSupply from fountain
             IFountain fountain =
-                IFountain(manager.getFountain(address(lpToken[pid])));
+                IFountain(archangel.getFountain(address(lpToken[pid])));
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
             if (lpSupply > 0) {
                 uint256 time = block.timestamp.sub(pool.lastRewardTime);
