@@ -13,8 +13,8 @@ const utils = web3.utils;
 const { expect } = require('chai');
 
 const Manager = artifacts.require('Manager');
-const MiniChef = artifacts.require('MiniChefV2');
-const ChefFactory = artifacts.require('ChefFactory');
+const Angel = artifacts.require('Angel');
+const AngelFactory = artifacts.require('AngelFactory');
 const Fridge = artifacts.require('Fridge');
 const FridgeFactory = artifacts.require('FridgeFactory');
 const SimpleToken = artifacts.require('SimpleToken');
@@ -22,9 +22,9 @@ const SimpleToken = artifacts.require('SimpleToken');
 contract('Fridge factory', function([_, user]) {
   beforeEach(async function() {
     this.manager = await Manager.new();
-    const chefFactory = await this.manager.chefFactory.call();
+    const angelFactory = await this.manager.angelFactory.call();
     const fridgeFactory = await this.manager.fridgeFactory.call();
-    this.chefFactory = await ChefFactory.at(chefFactory);
+    this.angelFactory = await AngelFactory.at(angelFactory);
     this.fridgeFactory = await FridgeFactory.at(fridgeFactory);
     this.token1 = await SimpleToken.new('Staking', 'STK', ether('1000000000'));
     this.token2 = await SimpleToken.new('Reward', 'RWD', ether('1000000000'));

@@ -3,16 +3,16 @@
 pragma solidity 0.6.12;
 
 import "./interfaces/IManager.sol";
-import "./ChefFactory.sol";
+import "./AngelFactory.sol";
 import "./FridgeFactory.sol";
 
 /// @title Staking system manager
 contract Manager {
-    ChefFactory public immutable chefFactory;
+    AngelFactory public immutable angelFactory;
     FridgeFactory public immutable fridgeFactory;
 
     constructor() public {
-        chefFactory = new ChefFactory();
+        angelFactory = new AngelFactory();
         fridgeFactory = new FridgeFactory();
     }
 

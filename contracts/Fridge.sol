@@ -6,7 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./libraries/ERC20Permit.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
-import "./interfaces/IMiniChefV2.sol";
+import "./interfaces/IAngel.sol";
 import "./interfaces/IFridge.sol";
 
 // TODO: delegate executions
@@ -18,19 +18,19 @@ contract Fridge is ERC20Permit {
     /// @notice The staking token of this Fridge
     IERC20 public immutable stakingToken;
 
-    /// @notice The information of chef that is cached in Fridge
-    struct ChefInfo {
+    /// @notice The information of angel that is cached in Fridge
+    struct AngelInfo {
         uint256 pid;
         uint256 totalBalance;
     }
 
-    /// @dev The chefs that user joined
-    mapping(address => IMiniChefV2[]) private _joinChefs;
-    /// @dev The information of chefs
-    mapping(IMiniChefV2 => ChefInfo) private _chefInfos;
+    /// @dev The angels that user joined
+    mapping(address => IAngel[]) private _joinAngels;
+    /// @dev The information of angels
+    mapping(IAngel => AngelInfo) private _angelInfos;
 
-    event Joined(address user, address chef);
-    event Quitted(address user, address chef);
+    event Joined(address user, address angel);
+    event Quitted(address user, address angel);
 
     constructor(
         IERC20 token,
@@ -41,39 +41,31 @@ contract Fridge is ERC20Permit {
     }
 
     // Getters
-    function joinedChef(address user)
-        external
-        view
-        returns (IMiniChefV2[] memory)
-    {
-        return _joinChefs[user];
+    function joinedAngel(address user) external view returns (IAngel[] memory) {
+        return _joinAngels[user];
     }
 
-    function chefInfo(IMiniChefV2 chef)
-        external
-        view
-        returns (uint256, uint256)
-    {
-        return (_chefInfos[chef].pid, _chefInfos[chef].totalBalance);
+    function angelInfo(IAngel angel) external view returns (uint256, uint256) {
+        return (_angelInfos[angel].pid, _angelInfos[angel].totalBalance);
     }
 
-    // Chef action
-    /// @notice Chef may set their own pid that matches the staking token
+    // Angel action
+    /// @notice Angel may set their own pid that matches the staking token
     /// of the Fridge.
     function setPoolId(uint256 pid) external {
-        IMiniChefV2 chef = IMiniChefV2(msg.sender);
-        require(_chefInfos[chef].pid == 0, "Pid is set");
+        IAngel angel = IAngel(msg.sender);
+        require(_angelInfos[angel].pid == 0, "Pid is set");
         require(
-            chef.lpToken(pid) == address(stakingToken),
+            angel.lpToken(pid) == address(stakingToken),
             "Token not matched"
         );
-        _chefInfos[chef].pid = pid;
-        _chefInfos[chef].totalBalance = 0;
+        _angelInfos[angel].pid = pid;
+        _angelInfos[angel].totalBalance = 0;
     }
 
     // User action
     /// @notice User may deposit their lp token. FRG token will be minted.
-    /// Fridge will call chef's deposit to update user information, but the tokens
+    /// Fridge will call angel's deposit to update user information, but the tokens
     /// stay in Fridge.
     function deposit(uint256 amount) external {
         // Mint token
@@ -85,7 +77,7 @@ contract Fridge is ERC20Permit {
 
     // TODO: permit version
     /// @notice User may withdraw their lp token. FRG token will be burned.
-    /// Fridge will call chef's withdraw to update user information, but the tokens
+    /// Fridge will call angel's withdraw to update user information, but the tokens
     /// will be transferred from Fridge.
     function withdraw(uint256 amount) external {
         // Burn token
@@ -95,22 +87,22 @@ contract Fridge is ERC20Permit {
         stakingToken.safeTransfer(msg.sender, amount);
     }
 
-    /// @notice User may harvest from any chef.
-    function harvest(IMiniChefV2 chef) external {
-        // TODO: Should verify is the chef is valid
-        // Call chef
-        uint256 pid = _chefInfos[chef].pid;
-        chef.harvest(pid, msg.sender);
+    /// @notice User may harvest from any angel.
+    function harvest(IAngel angel) external {
+        // TODO: Should verify is the angel is valid
+        // Call angel
+        uint256 pid = _angelInfos[angel].pid;
+        angel.harvest(pid, msg.sender);
     }
 
-    /// @notice User may harvest from all the joined chefs.
+    /// @notice User may harvest from all the joined angels.
     function harvestAll() external {
-        // Call joined chef
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        for (uint256 i = 0; i < chefs.length; i++) {
-            IMiniChefV2 chef = chefs[i];
-            uint256 pid = _chefInfos[chef].pid;
-            chef.harvest(pid, msg.sender);
+        // Call joined angel
+        IAngel[] storage angels = _joinAngels[msg.sender];
+        for (uint256 i = 0; i < angels.length; i++) {
+            IAngel angel = angels[i];
+            uint256 pid = _angelInfos[angel].pid;
+            angel.harvest(pid, msg.sender);
         }
     }
 
@@ -125,36 +117,36 @@ contract Fridge is ERC20Permit {
         stakingToken.safeTransfer(msg.sender, amount);
     }
 
-    /// @notice Join the given chef's program.
-    function joinChef(IMiniChefV2 chef) external {
-        // TODO: Should verify if the chef is valid
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        for (uint256 i = 0; i < chefs.length; i++) {
-            require(chefs[i] != chef);
+    /// @notice Join the given angel's program.
+    function joinAngel(IAngel angel) external {
+        // TODO: Should verify if the angel is valid
+        IAngel[] storage angels = _joinAngels[msg.sender];
+        for (uint256 i = 0; i < angels.length; i++) {
+            require(angels[i] != angel);
         }
-        chefs.push(chef);
+        angels.push(angel);
 
-        emit Joined(msg.sender, address(chef));
+        emit Joined(msg.sender, address(angel));
 
-        // Update user info at chef
-        _depositChef(msg.sender, chef, balanceOf(msg.sender));
+        // Update user info at angel
+        _depositAngel(msg.sender, angel, balanceOf(msg.sender));
     }
 
-    /// @notice Quit the given chef's program.
-    function quitChef(IMiniChefV2 chef) external {
-        // TODO: Should verify if the chef is valid
-        IMiniChefV2[] storage chefs = _joinChefs[msg.sender];
-        IMiniChefV2[] memory temp = chefs;
-        delete _joinChefs[msg.sender];
+    /// @notice Quit the given angel's program.
+    function quitAngel(IAngel angel) external {
+        // TODO: Should verify if the angel is valid
+        IAngel[] storage angels = _joinAngels[msg.sender];
+        IAngel[] memory temp = angels;
+        delete _joinAngels[msg.sender];
         for (uint256 i = 0; i < temp.length; i++) {
-            if (temp[i] != chef) chefs.push(temp[i]);
+            if (temp[i] != angel) angels.push(temp[i]);
         }
-        require(chefs.length != temp.length);
+        require(angels.length != temp.length);
 
-        emit Quitted(msg.sender, address(chef));
+        emit Quitted(msg.sender, address(angel));
 
-        // Update user info at chef
-        _withdrawChef(msg.sender, chef, balanceOf(msg.sender));
+        // Update user info at angel
+        _withdrawAngel(msg.sender, angel, balanceOf(msg.sender));
     }
 
     /// @notice Harvest for the sender and receiver when token amount changes.
@@ -165,63 +157,61 @@ contract Fridge is ERC20Permit {
     ) internal override {
         // TODO: Add more conditions to avoid unnecessary harvests.
         if (from != address(0)) {
-            IMiniChefV2[] storage chefs = _joinChefs[from];
+            IAngel[] storage angels = _joinAngels[from];
             if (amount < type(uint256).max) {
-                for (uint256 i = 0; i < chefs.length; i++) {
-                    IMiniChefV2 chef = chefs[i];
-                    _withdrawChef(from, chef, amount);
+                for (uint256 i = 0; i < angels.length; i++) {
+                    IAngel angel = angels[i];
+                    _withdrawAngel(from, angel, amount);
                 }
             } else {
-                for (uint256 i = 0; i < chefs.length; i++) {
-                    IMiniChefV2 chef = chefs[i];
-                    _emergencyWithdrawChef(from, chef);
+                for (uint256 i = 0; i < angels.length; i++) {
+                    IAngel angel = angels[i];
+                    _emergencyWithdrawAngel(from, angel);
                 }
             }
         }
         if (to != address(0)) {
-            IMiniChefV2[] storage chefs = _joinChefs[to];
-            for (uint256 i = 0; i < chefs.length; i++) {
-                IMiniChefV2 chef = chefs[i];
-                _depositChef(to, chef, amount);
+            IAngel[] storage angels = _joinAngels[to];
+            for (uint256 i = 0; i < angels.length; i++) {
+                IAngel angel = angels[i];
+                _depositAngel(to, angel, amount);
             }
         }
     }
 
-    /// @notice The total staked amount should be updated in chefInfo when
+    /// @notice The total staked amount should be updated in angelInfo when
     /// token is being deposited/withdrawn.
-    function _depositChef(
+    function _depositAngel(
         address account,
-        IMiniChefV2 chef,
+        IAngel angel,
         uint256 amount
     ) internal {
-        uint256 pid = _chefInfos[chef].pid;
-        require(pid != 0, "Fridge not added by chef");
-        chef.deposit(pid, amount, account);
-        _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.add(
+        uint256 pid = _angelInfos[angel].pid;
+        require(pid != 0, "Fridge not added by angel");
+        angel.deposit(pid, amount, account);
+        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.add(
             amount
         );
     }
 
-    function _withdrawChef(
+    function _withdrawAngel(
         address account,
-        IMiniChefV2 chef,
+        IAngel angel,
         uint256 amount
     ) internal {
-        uint256 pid = _chefInfos[chef].pid;
-        chef.withdraw(pid, amount, account);
-        _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.sub(
+        uint256 pid = _angelInfos[angel].pid;
+        angel.withdraw(pid, amount, account);
+        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.sub(
             amount
         );
     }
 
-    function _emergencyWithdrawChef(address account, IMiniChefV2 chef)
-        internal
-    {
+    function _emergencyWithdrawAngel(address account, IAngel angel) internal {
         uint256 amount = balanceOf(account);
-        uint256 pid = _chefInfos[chef].pid;
-        _chefInfos[chef].totalBalance = _chefInfos[chef].totalBalance.sub(
+        uint256 pid = _angelInfos[angel].pid;
+        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.sub(
             amount
         );
-        chef.emergencyWithdraw(pid, account);
+        angel.emergencyWithdraw(pid, account);
     }
 }

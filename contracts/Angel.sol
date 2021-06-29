@@ -9,7 +9,7 @@ import "./libraries/boringcrypto/BoringOwnable.sol";
 import "./libraries/SignedSafeMath.sol";
 import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
-import "./interfaces/IChefFactory.sol";
+import "./interfaces/IAngelFactory.sol";
 import "./interfaces/IManager.sol";
 import "./interfaces/IFridge.sol";
 
@@ -19,12 +19,10 @@ interface IMigratorChef {
     function migrate(IERC20 token) external returns (IERC20);
 }
 
-/// @notice The (older) MasterChef contract gives out a constant number of SUSHI tokens per block.
-/// It is the only address with minting rights for SUSHI.
-/// The idea for this MasterChef V2 (MCV2) contract is therefore to be the owner of a dummy token
-/// that is deposited into the MasterChef V1 (MCV1) contract.
-/// The allocation point for this pool on MCV1 is the total allocation point for all pools that receive double incentives.
-contract MiniChefV2 is BoringOwnable, BoringBatchable {
+/// @notice Angel is a forked version of MiniChefV2 from SushiSwap with
+/// minimal modifications to interact with fountain in Trevi. The staking
+/// tokens are managed in fountain instead of here.
+contract Angel is BoringOwnable, BoringBatchable {
     using BoringMath for uint256;
     using BoringMath128 for uint128;
     using BoringERC20 for IERC20;
@@ -237,7 +235,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
         // uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
         // Need to get the lpSupply from fridge
         IFridge fridge = IFridge(manager.getFridge(address(lpToken[_pid])));
-        (, uint256 lpSupply) = fridge.chefInfo(address(this));
+        (, uint256 lpSupply) = fridge.angelInfo(address(this));
         if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
             uint256 time = block.timestamp.sub(pool.lastRewardTime);
             uint256 sushiReward =
@@ -272,7 +270,7 @@ contract MiniChefV2 is BoringOwnable, BoringBatchable {
             // uint256 lpSupply = lpToken[pid].balanceOf(address(this));
             // Need to get the lpSupply from fridge
             IFridge fridge = IFridge(manager.getFridge(address(lpToken[pid])));
-            (, uint256 lpSupply) = fridge.chefInfo(address(this));
+            (, uint256 lpSupply) = fridge.angelInfo(address(this));
             if (lpSupply > 0) {
                 uint256 time = block.timestamp.sub(pool.lastRewardTime);
                 uint256 sushiReward =

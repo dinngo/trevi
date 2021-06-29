@@ -5,5 +5,5 @@ pragma experimental ABIEncoderV2;
 
 interface IFridge {
     function setPoolId(uint256 pid) external;
-    function chefInfo(address chef) external view returns (uint256, uint256);
+    function angelInfo(address angel) external view returns (uint256, uint256);
 }
