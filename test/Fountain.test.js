@@ -409,7 +409,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         });
       });
 
-      describe('permit and transferFrom', function() {
+      describe('permit', function() {
         it('normal', async function() {
           const name = await this.fountain1.name.call();
           const version = '1';
@@ -447,6 +447,53 @@ contract('Fountain', function([_, user, someone, rewarder]) {
           expect(
             await this.fountain1.allowance(owner, spender)
           ).to.be.bignumber.eq(value);
+        });
+      });
+
+      describe('permit and transferFrom', function() {
+        it('normal', async function() {
+          const name = await this.fountain1.name.call();
+          const version = '1';
+          const chainId = await web3.eth.getChainId();
+          const verifyingContract = this.fountain1.address;
+          const wallet = await web3.eth.accounts.create();
+          const owner = wallet.address;
+          const spender = someone;
+          const value = depositAmount;
+          const nonce = 0;
+          const deadline = MAX_UINT256;
+          const data = {
+            primaryType: 'Permit',
+            types: { EIP712Domain, Permit },
+            domain: { name, version, chainId, verifyingContract },
+            message: { owner, spender, value, nonce, deadline },
+          };
+          const signature = ethSigUtil.signTypedMessage(
+            utils.hexToBytes(wallet.privateKey),
+            {
+              data,
+            }
+          );
+          const { v, r, s } = fromRpcSig(signature);
+          // Prepare token
+          await this.fountain1.transfer(owner, value, { from: user });
+          await this.fountain1.transferFromWithPermit(
+            owner,
+            user,
+            value,
+            deadline,
+            v,
+            r,
+            s,
+            { from: spender }
+          );
+          expect(await this.fountain1.nonces(owner)).to.be.bignumber.eq('1');
+          expect(
+            await this.fountain1.allowance(owner, spender)
+          ).to.be.bignumber.eq(ether('0'));
+          expect(await this.fountain1.balanceOf(user)).to.be.bignumber.eq(
+            value
+          );
         });
       });
     });

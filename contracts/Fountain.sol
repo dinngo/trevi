@@ -3,15 +3,15 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./libraries/ERC20Permit.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./interfaces/IAngel.sol";
 import "./interfaces/IFountain.sol";
+import "./FountainToken.sol";
 
 // TODO: delegate executions
 /// @title Staking vault of lpTokens
-contract Fountain is ERC20Permit {
+contract Fountain is FountainToken {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -36,7 +36,7 @@ contract Fountain is ERC20Permit {
         IERC20 token,
         string memory name_,
         string memory symbol_
-    ) public ERC20(name_, symbol_) ERC20Permit(name_) {
+    ) public FountainToken(name_, symbol_) {
         stakingToken = token;
     }
 
