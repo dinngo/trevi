@@ -41,11 +41,11 @@ contract Fountain is FountainToken {
     }
 
     // Getters
-    function joinedAngel(address user) external view returns (IAngel[] memory) {
+    function joinedAngel(address user) public view returns (IAngel[] memory) {
         return _joinAngels[user];
     }
 
-    function angelInfo(IAngel angel) external view returns (uint256, uint256) {
+    function angelInfo(IAngel angel) public view returns (uint256, uint256) {
         return (_angelInfos[angel].pid, _angelInfos[angel].totalBalance);
     }
 
@@ -53,7 +53,7 @@ contract Fountain is FountainToken {
     /// @notice Angel may set their own pid that matches the staking token
     /// of the Fountain.
     function setPoolId(uint256 pid) external {
-        IAngel angel = IAngel(msg.sender);
+        IAngel angel = IAngel(_msgSender());
         require(_angelInfos[angel].pid == 0, "Pid is set");
         require(
             angel.lpToken(pid) == address(stakingToken),
@@ -69,10 +69,10 @@ contract Fountain is FountainToken {
     /// stay in Fountain.
     function deposit(uint256 amount) external {
         // Mint token
-        _mint(msg.sender, amount);
+        _mint(_msgSender(), amount);
 
         // Transfer user staking token
-        stakingToken.safeTransferFrom(msg.sender, address(this), amount);
+        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
     }
 
     /// @notice User may withdraw their lp token. FTN token will be burned.
@@ -80,72 +80,69 @@ contract Fountain is FountainToken {
     /// will be transferred from Fountain.
     function withdraw(uint256 amount) external {
         // Burn token
-        _burn(msg.sender, amount);
+        _burn(_msgSender(), amount);
 
         // Transfer user staking token
-        stakingToken.safeTransfer(msg.sender, amount);
+        stakingToken.safeTransfer(_msgSender(), amount);
     }
 
     /// @notice User may harvest from any angel.
     function harvest(IAngel angel) external {
         // TODO: Should verify is the angel is valid
-        // Call angel
-        uint256 pid = _angelInfos[angel].pid;
-        angel.harvest(pid, msg.sender);
+        _harvest(angel, _msgSender(), _msgSender());
     }
 
     /// @notice User may harvest from all the joined angels.
     function harvestAll() external {
         // Call joined angel
-        IAngel[] storage angels = _joinAngels[msg.sender];
+        IAngel[] storage angels = _joinAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
             IAngel angel = angels[i];
-            uint256 pid = _angelInfos[angel].pid;
-            angel.harvest(pid, msg.sender);
+            _harvest(angel, _msgSender(), _msgSender());
         }
     }
 
     /// @notice Emergency withdraw all tokens.
     function emergencyWithdraw() external {
-        uint256 amount = balanceOf(msg.sender);
+        uint256 amount = balanceOf(_msgSender());
 
         // Burn token
-        _burn(msg.sender, uint256(-1));
+        _burn(_msgSender(), type(uint256).max);
 
         // Transfer user staking token
-        stakingToken.safeTransfer(msg.sender, amount);
+        stakingToken.safeTransfer(_msgSender(), amount);
     }
 
     /// @notice Join the given angel's program.
     function joinAngel(IAngel angel) external {
         // TODO: Should verify if the angel is valid
-        IAngel[] storage angels = _joinAngels[msg.sender];
+        IAngel[] storage angels = _joinAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
             require(angels[i] != angel);
         }
         angels.push(angel);
 
-        emit Joined(msg.sender, address(angel));
+        emit Joined(_msgSender(), address(angel));
 
         // Update user info at angel
-        _depositAngel(msg.sender, angel, balanceOf(msg.sender));
+        _depositAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 
     /// @notice Quit the given angel's program.
     function quitAngel(IAngel angel) external {
         // TODO: Should verify if the angel is valid
-        IAngel[] storage angels = _joinAngels[msg.sender];
+        IAngel[] storage angels = _joinAngels[_msgSender()];
         IAngel[] memory temp = angels;
-        delete _joinAngels[msg.sender];
+        delete _joinAngels[_msgSender()];
         for (uint256 i = 0; i < temp.length; i++) {
             if (temp[i] != angel) angels.push(temp[i]);
         }
         require(angels.length != temp.length);
 
-        emit Quitted(msg.sender, address(angel));
+        emit Quitted(_msgSender(), address(angel));
 
         // Update user info at angel
-        _withdrawAngel(msg.sender, angel, balanceOf(msg.sender));
+        _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 
     /// @notice Withdraw for the sender and deposit for the receiver
@@ -204,6 +201,15 @@ contract Fountain is FountainToken {
         _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.sub(
             amount
         );
+    }
+
+    function _harvest(
+        IAngel angel,
+        address from,
+        address to
+    ) internal {
+        uint256 pid = _angelInfos[angel].pid;
+        angel.harvest(pid, from, to);
     }
 
     function _emergencyWithdrawAngel(address account, IAngel angel) internal {

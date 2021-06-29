@@ -367,12 +367,16 @@ contract Angel is BoringOwnable, BoringBatchable {
     /// @notice Harvest proceeds for transaction sender to `to`.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of SUSHI rewards.
-    function harvest(uint256 pid, address to) public onlyFountain {
+    function harvest(
+        uint256 pid,
+        address from,
+        address to
+    ) public onlyFountain {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
-        UserInfo storage user = userInfo[pid][to];
+        UserInfo storage user = userInfo[pid][from];
         int256 accumulatedSushi =
             int256(
                 user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION
@@ -404,7 +408,7 @@ contract Angel is BoringOwnable, BoringBatchable {
 
         ////////////////////////// New
         // emit Harvest(msg.sender, pid, _pendingSushi);
-        emit Harvest(to, pid, _pendingSushi);
+        emit Harvest(from, pid, _pendingSushi);
     }
 
     /// @notice Withdraw LP tokens from MCV2 and harvest proceeds for transaction sender to `to`.
