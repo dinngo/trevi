@@ -6,8 +6,10 @@ pragma experimental ABIEncoderV2;
 import "./libraries/ReentrancyGuard.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
+import "./interfaces/IArchangel.sol";
 import "./interfaces/IAngel.sol";
 import "./interfaces/IFountain.sol";
+import "./interfaces/IFountainFactory.sol";
 import "./FountainToken.sol";
 
 // TODO: delegate executions
@@ -18,6 +20,9 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
 
     /// @notice The staking token of this Fountain
     IERC20 public immutable stakingToken;
+
+    IFountainFactory public immutable factory;
+    IArchangel public immutable archangel;
 
     /// @notice The information of angel that is cached in Fountain
     struct AngelInfo {
@@ -45,6 +50,9 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
 
     constructor(IERC20 token) public {
         stakingToken = token;
+        IFountainFactory f = IFountainFactory(msg.sender);
+        factory = f;
+        archangel = IArchangel(f.archangel());
     }
 
     // Getters
