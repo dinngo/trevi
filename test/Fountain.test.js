@@ -225,7 +225,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         );
       });
 
-      it('normal', async function() {
+      it('to sender', async function() {
         const depositAmount = ether('10');
         // join angel
         await this.fountain1.joinAngel(this.angel1.address, { from: user });
@@ -249,6 +249,40 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         await this.fountain1.joinAngel(this.angel2.address, { from: user });
         info2 = await this.angel2.userInfo.call(pid, user);
         expect(info2[0]).to.be.bignumber.eq(depositAmount);
+      });
+
+      it('to others', async function() {
+        const depositAmount = ether('10');
+        // join angel
+        await this.fountain1.joinAngel(this.angel1.address, { from: someone });
+        // user deposit
+        const token1Before = await this.stkToken1.balanceOf.call(user);
+        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+          from: user,
+        });
+        await this.fountain1.depositTo(depositAmount, someone, { from: user });
+        const token1UserAfter = await this.stkToken1.balanceOf.call(user);
+        // check token
+        expect(token1UserAfter).to.be.bignumber.eq(
+          token1Before.sub(depositAmount)
+        );
+        // check joined angel user balance
+        const pid = new BN('0');
+        const info1User = await this.angel1.userInfo.call(pid, user);
+        const info1Someone = await this.angel1.userInfo.call(pid, someone);
+        expect(info1User[0]).to.be.bignumber.eq(ether('0'));
+        expect(info1Someone[0]).to.be.bignumber.eq(depositAmount);
+        // check non-joined angel user balance
+        let info2User = await this.angel2.userInfo.call(pid, user);
+        let info2Someone = await this.angel2.userInfo.call(pid, someone);
+        expect(info2User[0]).to.be.bignumber.eq(ether('0'));
+        expect(info2Someone[0]).to.be.bignumber.eq(ether('0'));
+        // join after deposit
+        await this.fountain1.joinAngel(this.angel2.address, { from: someone });
+        info2User = await this.angel2.userInfo.call(pid, user);
+        info2Someone = await this.angel2.userInfo.call(pid, someone);
+        expect(info2User[0]).to.be.bignumber.eq(ether('0'));
+        expect(info2Someone[0]).to.be.bignumber.eq(depositAmount);
       });
     });
 

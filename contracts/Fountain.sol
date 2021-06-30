@@ -79,6 +79,18 @@ contract Fountain is FountainToken {
         stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
     }
 
+    // User action
+    /// @notice User may deposit their lp token for others. FTN token will be minted.
+    /// Fountain will call angel's deposit to update user information, but the tokens
+    /// stay in Fountain.
+    function depositTo(uint256 amount, address to) external {
+        // Mint token
+        _mint(to, amount);
+
+        // Transfer user staking token
+        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+    }
+
     /// @notice User may withdraw their lp token. FTN token will be burned.
     /// Fountain will call angel's withdraw to update user information, but the tokens
     /// will be transferred from Fountain.
