@@ -50,6 +50,7 @@ contract ERC20FlashLoan is IERC3156FlashLender {
     function flashFee(address token, uint256 amount)
         public
         view
+        virtual
         override
         returns (uint256)
     {
