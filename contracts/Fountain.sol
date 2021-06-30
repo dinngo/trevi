@@ -132,12 +132,19 @@ contract Fountain is FountainToken {
     function quitAngel(IAngel angel) external {
         // TODO: Should verify if the angel is valid
         IAngel[] storage angels = _joinAngels[_msgSender()];
-        IAngel[] memory temp = angels;
-        delete _joinAngels[_msgSender()];
-        for (uint256 i = 0; i < temp.length; i++) {
-            if (temp[i] != angel) angels.push(temp[i]);
+        uint256 len = angels.length;
+        if (angels[len - 1] == angel) {
+            angels.pop();
+        } else {
+            for (uint256 i = 0; i < len - 1; i++) {
+                if (angels[i] == angel) {
+                    angels[i] = angels[len - 1];
+                    break;
+                }
+            }
+            angels.pop();
         }
-        require(angels.length != temp.length);
+        require(angels.length != len);
 
         emit Quitted(_msgSender(), address(angel));
 
