@@ -22,7 +22,7 @@ interface IMigratorChef {
 /// @notice Angel is a forked version of MiniChefV2 from SushiSwap with
 /// minimal modifications to interact with fountain in Trevi. The staking
 /// tokens are managed in fountain instead of here.
-contract Angel is BoringOwnable, BoringBatchable {
+contract AngelBase is BoringOwnable, BoringBatchable {
     using BoringMath for uint256;
     using BoringMath128 for uint128;
     using BoringERC20 for IERC20;

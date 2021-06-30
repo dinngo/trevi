@@ -2,26 +2,25 @@
 
 pragma solidity 0.6.12;
 
-import "./libraries/interfaces/IERC3156.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
+import "./interfaces/IFlashLender.sol";
 
-contract ERC20FlashLoan is IERC3156FlashLender {
+contract ERC20FlashLoan is IFlashLender {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     IERC20 public immutable lendingToken;
+    uint256 public feeRate;
 
+    uint256 public constant FEE_BASE = 1e4;
+    uint256 public constant BASE_FEE_RATE = 100;
     bytes32 private constant _RETURN_VALUE =
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(IERC20 token) public {
         lendingToken = token;
-    }
-
-    function feeCollector() public view virtual returns (address) {
-        this;
-        return address(0);
+        feeRate = BASE_FEE_RATE;
     }
 
     /**
@@ -55,8 +54,7 @@ contract ERC20FlashLoan is IERC3156FlashLender {
         returns (uint256)
     {
         require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
-        amount;
-        return 0;
+        return amount.mul(feeRate).div(FEE_BASE);
     }
 
     /**
@@ -97,5 +95,15 @@ contract ERC20FlashLoan is IERC3156FlashLender {
         if (collector != address(0)) lendingToken.safeTransfer(collector, fee);
 
         return true;
+    }
+
+    function feeCollector() public view virtual override returns (address) {
+        this;
+        return address(0);
+    }
+
+    function setFee(uint256 rate) public virtual override {
+        require(rate <= FEE_BASE, "ERC20FlashLoan: rate exceeded");
+        feeRate = rate;
     }
 }

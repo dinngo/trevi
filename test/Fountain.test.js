@@ -26,6 +26,7 @@ const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 const Rewarder = artifacts.require('RewarderMock');
+const FlashBorrower = artifacts.require('FlashBorrower');
 
 const Permit = [
   { name: 'owner', type: 'address' },
@@ -43,14 +44,14 @@ const HarvestPermit = [
   { name: 'deadline', type: 'uint256' },
 ];
 
-contract('Fountain', function([_, user, someone, rewarder]) {
+contract('Fountain', function([_, user, someone, rewarder, owner]) {
   beforeEach(async function() {
-    this.archangel = await Archangel.new();
+    this.archangel = await Archangel.new({ from: owner });
     const angelFactory = await this.archangel.angelFactory.call();
     const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
     this.fountainFactory = await FountainFactory.at(fountainFactory);
-    this.stkToken = await SimpleToken.new('Staking', 'STK', ether('100'), {
+    this.stkToken = await SimpleToken.new('Staking', 'STK', ether('10000'), {
       from: user,
     });
     this.rwdToken1 = await SimpleToken.new('Reward', 'RWD', ether('1000000'), {
@@ -106,10 +107,6 @@ contract('Fountain', function([_, user, someone, rewarder]) {
   });
 
   describe('by user', function() {
-    let angel1;
-    let angel2;
-    let fountain1;
-    let fountain2;
     beforeEach(async function() {
       // Get angel
       let receipt = await this.angelFactory.create(this.rwdToken1.address, {
@@ -966,6 +963,120 @@ contract('Fountain', function([_, user, someone, rewarder]) {
           ).to.be.bignumber.eq(ether('0'));
           expect(await this.fountain.balanceOf(user)).to.be.bignumber.eq(value);
         });
+      });
+    });
+
+    describe('flashLoan', function() {
+      beforeEach(async function() {
+        const depositAmount = ether('1000');
+        this.borrower = await FlashBorrower.new();
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
+          from: user,
+        });
+        await this.fountain.deposit(depositAmount, { from: user });
+      });
+
+      it('normal', async function() {
+        const fee = ether('1');
+        const multiplier = new BN('100');
+        const collector = this.archangel.address;
+        await this.stkToken.approve(this.borrower.address, fee, {
+          from: user,
+        });
+        const tokenUserBefore = await this.stkToken.balanceOf.call(user);
+        const tokenLenderBefore = await this.stkToken.balanceOf.call(
+          this.fountain.address
+        );
+        const tokenCollectorBefore = await this.stkToken.balanceOf.call(
+          collector
+        );
+        await this.borrower.go(
+          this.fountain.address,
+          this.stkToken.address,
+          fee,
+          multiplier,
+          {
+            from: user,
+          }
+        );
+        const tokenUserAfter = await this.stkToken.balanceOf.call(user);
+        const tokenLenderAfter = await this.stkToken.balanceOf.call(
+          this.fountain.address
+        );
+        const tokenCollectorAfter = await this.stkToken.balanceOf.call(
+          collector
+        );
+        const tokenOwnerAfter = await this.stkToken.balanceOf.call(owner);
+        expect(tokenUserAfter.sub(tokenUserBefore)).to.be.bignumber.eq(
+          ether('0').sub(fee)
+        );
+        expect(tokenLenderAfter.sub(tokenLenderBefore)).to.be.bignumber.eq(fee);
+        expect(
+          tokenCollectorAfter.sub(tokenCollectorBefore)
+        ).to.be.bignumber.eq(ether('0'));
+        const receipt = await this.archangel.rescueERC20(
+          this.stkToken.address,
+          this.fountain.address,
+          { from: owner }
+        );
+        const tokenLenderFinal = await this.stkToken.balanceOf.call(
+          this.fountain.address
+        );
+        const tokenCollectorFinal = await this.stkToken.balanceOf.call(
+          collector
+        );
+        const tokenOwnerFinal = await this.stkToken.balanceOf.call(owner);
+        expect(tokenLenderFinal.sub(tokenLenderAfter)).to.be.bignumber.eq(
+          ether('0').sub(fee)
+        );
+        expect(tokenCollectorFinal.sub(tokenCollectorAfter)).to.be.bignumber.eq(
+          ether('0')
+        );
+        expect(tokenOwnerFinal.sub(tokenOwnerAfter)).to.be.bignumber.eq(fee);
+      });
+
+      it('different token', async function() {
+        const fee = ether('1');
+        const multiplier = new BN('100');
+        const collector = this.archangel.address;
+        const token = await SimpleToken.new('Token', 'TKN', ether('10000'));
+        await token.transfer(user, fee);
+        await token.approve(this.borrower.address, fee, {
+          from: user,
+        });
+        await expectRevert(
+          this.borrower.go(
+            this.fountain.address,
+            token.address,
+            fee,
+            multiplier,
+            {
+              from: user,
+            }
+          ),
+          'wrong token'
+        );
+      });
+
+      it('insufficient fee', async function() {
+        const fee = ether('1');
+        const multiplier = new BN('1000');
+        const collector = this.archangel.address;
+        await this.stkToken.approve(this.borrower.address, fee, {
+          from: user,
+        });
+        await expectRevert(
+          this.borrower.go(
+            this.fountain.address,
+            this.stkToken.address,
+            fee,
+            multiplier,
+            {
+              from: user,
+            }
+          ),
+          'transfer amount exceeds balance'
+        );
       });
     });
   });
