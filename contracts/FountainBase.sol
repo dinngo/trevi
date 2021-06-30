@@ -12,7 +12,7 @@ import "./FountainToken.sol";
 
 // TODO: delegate executions
 /// @title Staking vault of lpTokens
-contract FountainBase is FountainToken, ReentrancyGuard {
+abstract contract FountainBase is FountainToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -43,11 +43,7 @@ contract FountainBase is FountainToken, ReentrancyGuard {
     );
     event Harvest(address indexed user);
 
-    constructor(
-        IERC20 token,
-        string memory name_,
-        string memory symbol_
-    ) public FountainToken(name_, symbol_) {
+    constructor(IERC20 token) public {
         stakingToken = token;
     }
 
