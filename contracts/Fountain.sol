@@ -143,12 +143,12 @@ contract Fountain is FountainToken {
             for (uint256 i = 0; i < len - 1; i++) {
                 if (angels[i] == angel) {
                     angels[i] = angels[len - 1];
+                    angels.pop();
                     break;
                 }
             }
-            angels.pop();
         }
-        require(angels.length != len);
+        require(angels.length != len, "Fountain: unjoined angel");
 
         emit Quitted(_msgSender(), address(angel));
 
