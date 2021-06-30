@@ -22,7 +22,7 @@ const { expect } = require('chai');
 const Archangel = artifacts.require('Archangel');
 const Angel = artifacts.require('Angel');
 const AngelFactory = artifacts.require('AngelFactory');
-const Fountain = artifacts.require('FountainPermit');
+const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 
