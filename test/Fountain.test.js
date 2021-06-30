@@ -92,7 +92,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         );
         // check at fountain
         const info = await this.fountain.angelInfo.call(this.angel.address);
-        expect(info[0]).to.be.bignumber.eq(new BN('1'));
+        expect(info[0]).to.be.bignumber.eq(new BN('0'));
         expect(info[1]).to.be.bignumber.eq(new BN('0'));
       });
 
@@ -102,7 +102,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
       it('not from fountain', async function() {
         // set pid direct
-        await expectRevert.unspecified(this.fountain.setPoolId(new BN('1')));
+        await expectRevert.unspecified(this.fountain.setPoolId(new BN('0')));
       });
     });
   });
@@ -166,7 +166,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
           this.fountain1.joinAngel(this.angel1.address, {
             from: user,
           }),
-          'Fountain not added by angel'
+          'Fountain: not added by angel'
         );
       });
     });
@@ -229,7 +229,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // check token
         expect(token1After).to.be.bignumber.eq(token1Before.sub(depositAmount));
         // check joined angel user balance
-        const pid = new BN('1');
+        const pid = new BN('0');
         const info1 = await this.angel1.userInfo.call(pid, user);
         expect(info1[0]).to.be.bignumber.eq(depositAmount);
         // check non-joined angel user balance
@@ -244,7 +244,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
     describe('withdraw', function() {
       const depositAmount = ether('10');
-      const pid = new BN('1');
+      const pid = new BN('0');
       beforeEach(async function() {
         // Add from Angel
         await this.angel1.add(
@@ -284,7 +284,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
     describe('harvest', function() {
       const depositAmount = ether('10');
-      const pid = new BN('1');
+      const pid = new BN('0');
       beforeEach(async function() {
         // Add from Angel
         await this.angel1.add(
@@ -585,7 +585,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
     describe('emergency withdraw', function() {
       const depositAmount = ether('10');
-      const pid = new BN('1');
+      const pid = new BN('0');
       beforeEach(async function() {
         // Add from Angel
         await this.angel1.add(
@@ -623,7 +623,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
     describe('erc20', function() {
       const depositAmount = ether('10');
-      const pid = new BN('1');
+      const pid = new BN('0');
       beforeEach(async function() {
         // Add from Angel
         await this.angel1.add(

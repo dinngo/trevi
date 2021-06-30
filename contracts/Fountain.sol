@@ -20,6 +20,7 @@ contract Fountain is FountainToken {
 
     /// @notice The information of angel that is cached in Fountain
     struct AngelInfo {
+        bool isSet;
         uint256 pid;
         uint256 totalBalance;
     }
@@ -46,7 +47,9 @@ contract Fountain is FountainToken {
     }
 
     function angelInfo(IAngel angel) public view returns (uint256, uint256) {
-        return (_angelInfos[angel].pid, _angelInfos[angel].totalBalance);
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet, "Fountain: angel not set");
+        return (info.pid, info.totalBalance);
     }
 
     // Angel action
@@ -54,13 +57,14 @@ contract Fountain is FountainToken {
     /// of the Fountain.
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(_msgSender());
-        require(_angelInfos[angel].pid == 0, "Pid is set");
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet == false, "Fountain: angel is set");
         require(
             angel.lpToken(pid) == address(stakingToken),
-            "Token not matched"
+            "Fountain: token not matched"
         );
-        _angelInfos[angel].pid = pid;
-        _angelInfos[angel].totalBalance = 0;
+        info.isSet = true;
+        info.pid = pid;
     }
 
     // User action
@@ -190,12 +194,10 @@ contract Fountain is FountainToken {
         IAngel angel,
         uint256 amount
     ) internal {
-        uint256 pid = _angelInfos[angel].pid;
-        require(pid != 0, "Fountain not added by angel");
-        angel.deposit(pid, amount, account);
-        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.add(
-            amount
-        );
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet, "Fountain: not added by angel");
+        angel.deposit(info.pid, amount, account);
+        info.totalBalance = info.totalBalance.add(amount);
     }
 
     function _withdrawAngel(
@@ -203,11 +205,10 @@ contract Fountain is FountainToken {
         IAngel angel,
         uint256 amount
     ) internal {
-        uint256 pid = _angelInfos[angel].pid;
-        angel.withdraw(pid, amount, account);
-        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.sub(
-            amount
-        );
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet, "Fountain: not added by angel");
+        angel.withdraw(info.pid, amount, account);
+        info.totalBalance = info.totalBalance.sub(amount);
     }
 
     function _harvest(
@@ -215,16 +216,16 @@ contract Fountain is FountainToken {
         address from,
         address to
     ) internal {
-        uint256 pid = _angelInfos[angel].pid;
-        angel.harvest(pid, from, to);
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet, "Fountain: not added by angel");
+        angel.harvest(info.pid, from, to);
     }
 
     function _emergencyWithdrawAngel(address account, IAngel angel) internal {
+        AngelInfo storage info = _angelInfos[angel];
+        require(info.isSet, "Fountain: not added by angel");
         uint256 amount = balanceOf(account);
-        uint256 pid = _angelInfos[angel].pid;
-        _angelInfos[angel].totalBalance = _angelInfos[angel].totalBalance.sub(
-            amount
-        );
-        angel.emergencyWithdraw(pid, account);
+        info.totalBalance = info.totalBalance.sub(amount);
+        angel.emergencyWithdraw(info.pid, account);
     }
 }

@@ -32,8 +32,6 @@ contract AngelFactory {
     /// same token is possible.
     function create(IERC20 reward) external returns (Angel) {
         Angel newAngel = new Angel(reward);
-        // bypass loc 0 at Angel
-        newAngel.add(0, IERC20(address(0)), IRewarder(address(0)));
         newAngel.transferOwnership(msg.sender, true, false);
         _rewards[newAngel] = reward;
 

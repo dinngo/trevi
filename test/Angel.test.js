@@ -67,7 +67,7 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
       });
-      expect(await this.angel.poolLength()).to.be.bignumber.eq(new BN('2'));
+      expect(await this.angel.poolLength()).to.be.bignumber.eq(new BN('1'));
     });
   });
 
@@ -80,7 +80,7 @@ contract('Angel', function([_, user, rewarder]) {
         { from: rewarder }
       );
       const receipt1 = await this.angel.set(
-        new BN('1'),
+        new BN('0'),
         new BN('10'),
         this.dummy.address,
         false,
@@ -89,13 +89,13 @@ contract('Angel', function([_, user, rewarder]) {
         }
       );
       expectEvent(receipt1, 'LogSetPool', {
-        pid: new BN('1'),
+        pid: new BN('0'),
         allocPoint: new BN('10'),
         rewarder: this.rewarder.address,
         overwrite: false,
       });
       const receipt2 = await this.angel.set(
-        new BN('1'),
+        new BN('0'),
         new BN('10'),
         this.dummy.address,
         true,
@@ -104,7 +104,7 @@ contract('Angel', function([_, user, rewarder]) {
         }
       );
       expectEvent(receipt2, 'LogSetPool', {
-        pid: new BN('1'),
+        pid: new BN('0'),
         allocPoint: new BN('10'),
         rewarder: this.dummy.address,
         overwrite: true,
@@ -114,7 +114,7 @@ contract('Angel', function([_, user, rewarder]) {
     it('Should revert if invalid pool', async function() {
       await expectRevert(
         this.angel.set(
-          new BN('1'),
+          new BN('0'),
           new BN('10'),
           this.rewarder.address,
           false,
@@ -140,14 +140,14 @@ contract('Angel', function([_, user, rewarder]) {
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fountain.deposit(new BN('1'), { from: user });
+      await this.fountain.deposit(new BN('0'), { from: user });
       await increase(seconds(86400));
       const timestamp2 = await latest();
-      await this.angel.updatePool(new BN('1'));
+      await this.angel.updatePool(new BN('0'));
       let expectedSushi = new BN('10000000000000000').mul(
         timestamp2.sub(timestamp)
       );
-      let pendingSushi = await this.angel.pendingSushi.call(new BN('1'), user);
+      let pendingSushi = await this.angel.pendingSushi.call(new BN('0'), user);
       expect(pendingSushi).to.be.bignumber.lte(expectedSushi);
     });
 
@@ -160,14 +160,14 @@ contract('Angel', function([_, user, rewarder]) {
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fountain.deposit(new BN('1'), { from: user });
+      await this.fountain.deposit(new BN('0'), { from: user });
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       const timestamp2 = await latest();
-      await this.angel.updatePool(new BN('1'));
+      await this.angel.updatePool(new BN('0'));
       let expectedSushi = new BN('10000000000000000').mul(
         timestamp2.sub(timestamp)
       );
-      let pendingSushi = await this.angel.pendingSushi.call(new BN('1'), user);
+      let pendingSushi = await this.angel.pendingSushi.call(new BN('0'), user);
       expect(pendingSushi).to.be.bignumber.gte(expectedSushi);
     });
   });
@@ -178,14 +178,14 @@ contract('Angel', function([_, user, rewarder]) {
         from: rewarder,
       });
       await advanceBlockTo((await latestBlock()).add(new BN('1')));
-      await this.angel.massUpdatePools([1]);
+      await this.angel.massUpdatePools([0]);
       //expect('updatePool').to.be.calledOnContract(); //not suported by heardhat
       //expect('updatePool').to.be.calledOnContractWith(0); //not suported by heardhat
     });
 
     it('Updating invalid pools should fail', async function() {
       await expectRevert(
-        this.angel.massUpdatePools([10000, 100000]),
+        this.angel.massUpdatePools([0, 10000, 100000]),
         'invalid opcode'
       );
     });
@@ -204,7 +204,7 @@ contract('Angel', function([_, user, rewarder]) {
         ),
         'LogPoolAddition',
         {
-          pid: new BN('1'),
+          pid: new BN('0'),
           allocPoint: new BN('10'),
           lpToken: this.stkToken.address,
           rewarder: this.rewarder.address,
@@ -224,13 +224,13 @@ contract('Angel', function([_, user, rewarder]) {
         }
       );
       await increase(seconds(86400));
-      const receipt = await this.angel.updatePool(new BN('1'));
+      const receipt = await this.angel.updatePool(new BN('0'));
       expectEvent(receipt, 'LogUpdatePool', {
-        pid: new BN('1'),
-        lastRewardTime: (await this.angel.poolInfo.call(new BN('1')))
+        pid: new BN('0'),
+        lastRewardTime: (await this.angel.poolInfo.call(new BN('0')))
           .lastRewardTime,
         lpSupply: await this.stkToken.balanceOf.call(this.angel.address),
-        accSushiPerShare: (await this.angel.poolInfo.call(new BN('1')))
+        accSushiPerShare: (await this.angel.poolInfo.call(new BN('0')))
           .accSushiPerShare,
       });
     });
