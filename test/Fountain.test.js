@@ -196,6 +196,16 @@ contract('Fountain', function([_, user, someone, rewarder]) {
           angel: this.angel1.address,
         });
       });
+
+      it('unjoined angel', async function() {
+        // user quit unjoined angel from fountain
+        await expectRevert(
+          this.fountain1.quitAngel(this.angel2.address, {
+            from: user,
+          }),
+          'Fountain: unjoined angel'
+        );
+      });
     });
 
     describe('deposit', function() {
