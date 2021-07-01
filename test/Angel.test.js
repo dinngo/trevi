@@ -56,7 +56,7 @@ contract('Angel', function([_, user, rewarder]) {
       from: rewarder,
     });
     this.rewarder = await RewarderMock.new(
-      new BN('1'),
+      ether('1'),
       this.dummy.address,
       this.angel.address
     );
@@ -135,12 +135,12 @@ contract('Angel', function([_, user, rewarder]) {
         this.rewarder.address,
         { from: rewarder }
       );
-      await this.stkToken.approve(this.fountain.address, new BN('10'), {
+      await this.stkToken.approve(this.fountain.address, ether('10'), {
         from: user,
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fountain.deposit(new BN('0'), { from: user });
+      await this.fountain.deposit(ether('1'), { from: user });
       await increase(seconds(86400));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
@@ -155,12 +155,12 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
       });
-      await this.stkToken.approve(this.fountain.address, new BN('10'), {
+      await this.stkToken.approve(this.fountain.address, ether('10'), {
         from: user,
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
       const timestamp = await latest();
-      await this.fountain.deposit(new BN('0'), { from: user });
+      await this.fountain.deposit(ether('1'), { from: user });
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
