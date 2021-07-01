@@ -61,7 +61,6 @@ contract('Fountain', function([_, user, someone, rewarder]) {
     });
   });
 
-  /*
   describe('by angel', function() {
     beforeEach(async function() {
       const receipt = await this.angelFactory.create(this.rwdToken1.address, {
@@ -105,7 +104,6 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       });
     });
   });
-*/
 
   describe('by user', function() {
     let angel1;
