@@ -33,6 +33,15 @@ contract FountainBase is FountainToken {
     event Joined(address user, address angel);
     event Quitted(address user, address angel);
 
+    event Deposit(address indexed user, uint256 amount, address indexed to);
+    event Withdraw(address indexed user, uint256 amount, address indexed to);
+    event EmergencyWithdraw(
+        address indexed user,
+        uint256 amount,
+        address indexed to
+    );
+    event Harvest(address indexed user);
+
     constructor(
         IERC20 token,
         string memory name_,
@@ -77,6 +86,8 @@ contract FountainBase is FountainToken {
 
         // Transfer user staking token
         stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+
+        emit Deposit(_msgSender(), amount, _msgSender());
     }
 
     // User action
@@ -89,6 +100,7 @@ contract FountainBase is FountainToken {
 
         // Transfer user staking token
         stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+        emit Deposit(_msgSender(), amount, to);
     }
 
     /// @notice User may withdraw their lp token. FTN token will be burned.
@@ -100,12 +112,14 @@ contract FountainBase is FountainToken {
 
         // Transfer user staking token
         stakingToken.safeTransfer(_msgSender(), amount);
+        emit Withdraw(_msgSender(), amount, _msgSender());
     }
 
     /// @notice User may harvest from any angel.
     function harvest(IAngel angel) external {
         // TODO: Should verify is the angel is valid
         _harvestAngel(angel, _msgSender(), _msgSender());
+        emit Harvest(_msgSender());
     }
 
     /// @notice User may harvest from all the joined angels.
@@ -116,6 +130,7 @@ contract FountainBase is FountainToken {
             IAngel angel = angels[i];
             _harvestAngel(angel, _msgSender(), _msgSender());
         }
+        emit Harvest(_msgSender());
     }
 
     /// @notice Emergency withdraw all tokens.
@@ -127,6 +142,7 @@ contract FountainBase is FountainToken {
 
         // Transfer user staking token
         stakingToken.safeTransfer(_msgSender(), amount);
+        emit EmergencyWithdraw(_msgSender(), amount, _msgSender());
     }
 
     /// @notice Join the given angel's program.

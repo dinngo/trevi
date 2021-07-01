@@ -30,7 +30,7 @@ contract Fountain is FountainBase {
      *  @dev Emitted when the allowance of a `sender` for an `owner` is set by
      * a call to {approve}. `timeLimit` is the new allowance.
      */
-    event Approval(
+    event HarvestApproval(
         address indexed owner,
         address indexed sender,
         uint256 timeLimit
@@ -115,6 +115,7 @@ contract Fountain is FountainBase {
         address to
     ) public canHarvestFrom(from) {
         _harvestAngel(angel, from, to);
+        emit Harvest(from);
     }
 
     /// @notice User may harvest from all the joined angels of permitted user
@@ -127,6 +128,7 @@ contract Fountain is FountainBase {
             IAngel angel = angels[i];
             _harvestAngel(angel, from, to);
         }
+        emit Harvest(from);
     }
 
     function harvestFromWithPermit(
@@ -163,7 +165,7 @@ contract Fountain is FountainBase {
      * This internal function is equivalent to `approve`, and can be used to
      * e.g. set automatic allowances for certain subsystems, etc.
      *
-     * Emits an {Approval} event.
+     * Emits an {HarvestApproval} event.
      *
      * Requirements:
      *
@@ -179,6 +181,6 @@ contract Fountain is FountainBase {
         require(sender != address(0), "Fountain: approve to the zero address");
 
         _allowances[owner][sender] = timeLimit;
-        emit Approval(owner, sender, timeLimit);
+        emit HarvestApproval(owner, sender, timeLimit);
     }
 }
