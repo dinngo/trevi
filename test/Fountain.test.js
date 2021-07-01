@@ -25,6 +25,7 @@ const AngelFactory = artifacts.require('AngelFactory');
 const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
+const Rewarder = artifacts.require('RewarderMock');
 
 const Permit = [
   { name: 'owner', type: 'address' },
@@ -49,20 +50,18 @@ contract('Fountain', function([_, user, someone, rewarder]) {
     const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
     this.fountainFactory = await FountainFactory.at(fountainFactory);
-    this.stkToken1 = await SimpleToken.new('Staking', 'STK', ether('10'), {
+    this.stkToken = await SimpleToken.new('Staking', 'STK', ether('100'), {
       from: user,
     });
-    this.stkToken2 = await SimpleToken.new('Staking', 'STK', ether('10'), {
-      from: user,
-    });
-    this.rwdToken1 = await SimpleToken.new('Reward', 'RWD', ether('100000'), {
+    this.rwdToken1 = await SimpleToken.new('Reward', 'RWD', ether('1000000'), {
       from: rewarder,
     });
-    this.rwdToken2 = await SimpleToken.new('Reward', 'RWD', ether('100000'), {
+    this.rwdToken2 = await SimpleToken.new('Reward', 'RWD', ether('1000000'), {
       from: rewarder,
     });
   });
 
+  /*
   describe('by angel', function() {
     beforeEach(async function() {
       const receipt = await this.angelFactory.create(this.rwdToken1.address, {
@@ -77,7 +76,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       beforeEach(async function() {
         // create fountain
         const receipt = await this.fountainFactory.create(
-          this.stkToken1.address
+          this.stkToken.address
         );
         this.fountain = await getCreated(receipt, Fountain);
       });
@@ -86,7 +85,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // add from Angel
         await this.angel.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
@@ -106,6 +105,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       });
     });
   });
+*/
 
   describe('by user', function() {
     let angel1;
@@ -133,10 +133,14 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         from: rewarder,
       });
       // Get fountain
-      receipt = await this.fountainFactory.create(this.stkToken1.address);
-      this.fountain1 = await getCreated(receipt, Fountain);
-      receipt = await this.fountainFactory.create(this.stkToken2.address);
-      this.fountain2 = await getCreated(receipt, Fountain);
+      receipt = await this.fountainFactory.create(this.stkToken.address);
+      this.fountain = await getCreated(receipt, Fountain);
+      // Get Rewarder
+      this.rewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address
+      );
     });
 
     describe('join angel', function() {
@@ -144,26 +148,26 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // user join angel from fountain
-        const receipt = await this.fountain1.joinAngel(this.angel1.address, {
+        const receipt = await this.fountain.joinAngel(this.angel1.address, {
           from: user,
         });
         expectEvent(receipt, 'Joined', {
           user: user,
           angel: this.angel1.address,
         });
-        const angels = await this.fountain1.joinedAngel.call(user);
+        const angels = await this.fountain.joinedAngel.call(user);
         expect(angels[0]).eq(this.angel1.address);
       });
 
       it('Not added from angel', async function() {
         // user join angel from fountain
         await expectRevert(
-          this.fountain1.joinAngel(this.angel1.address, {
+          this.fountain.joinAngel(this.angel1.address, {
             from: user,
           }),
           'Fountain: not added by angel'
@@ -176,19 +180,19 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // user join angel from fountain
-        await this.fountain1.joinAngel(this.angel1.address, {
+        await this.fountain.joinAngel(this.angel1.address, {
           from: user,
         });
       });
 
       it('normal', async function() {
         // user quit angel from fountain
-        const receipt = await this.fountain1.quitAngel(this.angel1.address, {
+        const receipt = await this.fountain.quitAngel(this.angel1.address, {
           from: user,
         });
         expectEvent(receipt, 'Quitted', {
@@ -200,7 +204,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       it('unjoined angel', async function() {
         // user quit unjoined angel from fountain
         await expectRevert(
-          this.fountain1.quitAngel(this.angel2.address, {
+          this.fountain.quitAngel(this.angel2.address, {
             from: user,
           }),
           'Fountain: unjoined angel'
@@ -213,13 +217,13 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         await this.angel2.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
@@ -228,17 +232,17 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       it('to sender', async function() {
         const depositAmount = ether('10');
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        const token1Before = await this.stkToken1.balanceOf.call(user);
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        const token1Before = await this.stkToken.balanceOf.call(user);
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        const receipt = await this.fountain1.deposit(depositAmount, {
+        const receipt = await this.fountain.deposit(depositAmount, {
           from: user,
         });
         expectEvent(receipt, 'Deposit', [user, depositAmount, user]);
-        const token1After = await this.stkToken1.balanceOf.call(user);
+        const token1After = await this.stkToken.balanceOf.call(user);
         // check token
         expect(token1After).to.be.bignumber.eq(token1Before.sub(depositAmount));
         // check joined angel user balance
@@ -249,7 +253,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         let info2 = await this.angel2.userInfo.call(pid, user);
         expect(info2[0]).to.be.bignumber.eq(ether('0'));
         // join after deposit
-        await this.fountain1.joinAngel(this.angel2.address, { from: user });
+        await this.fountain.joinAngel(this.angel2.address, { from: user });
         info2 = await this.angel2.userInfo.call(pid, user);
         expect(info2[0]).to.be.bignumber.eq(depositAmount);
       });
@@ -257,17 +261,17 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       it('0 amount', async function() {
         const depositAmount = ether('0');
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        const token1Before = await this.stkToken1.balanceOf.call(user);
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        const token1Before = await this.stkToken.balanceOf.call(user);
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        const receipt = await this.fountain1.deposit(depositAmount, {
+        const receipt = await this.fountain.deposit(depositAmount, {
           from: user,
         });
         expectEvent(receipt, 'Deposit', [user, depositAmount, user]);
-        const token1After = await this.stkToken1.balanceOf.call(user);
+        const token1After = await this.stkToken.balanceOf.call(user);
         // check token
         expect(token1After).to.be.bignumber.eq(token1Before.sub(depositAmount));
         // check joined angel user balance
@@ -278,7 +282,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         let info2 = await this.angel2.userInfo.call(pid, user);
         expect(info2[0]).to.be.bignumber.eq(ether('0'));
         // join after deposit
-        await this.fountain1.joinAngel(this.angel2.address, { from: user });
+        await this.fountain.joinAngel(this.angel2.address, { from: user });
         info2 = await this.angel2.userInfo.call(pid, user);
         expect(info2[0]).to.be.bignumber.eq(depositAmount);
       });
@@ -286,17 +290,17 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       it('to others', async function() {
         const depositAmount = ether('10');
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: someone });
+        await this.fountain.joinAngel(this.angel1.address, { from: someone });
         // user deposit
-        const token1Before = await this.stkToken1.balanceOf.call(user);
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        const token1Before = await this.stkToken.balanceOf.call(user);
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        const receipt = await this.fountain1.depositTo(depositAmount, someone, {
+        const receipt = await this.fountain.depositTo(depositAmount, someone, {
           from: user,
         });
         expectEvent(receipt, 'Deposit', [user, depositAmount, someone]);
-        const token1UserAfter = await this.stkToken1.balanceOf.call(user);
+        const token1UserAfter = await this.stkToken.balanceOf.call(user);
         // check token
         expect(token1UserAfter).to.be.bignumber.eq(
           token1Before.sub(depositAmount)
@@ -313,7 +317,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         expect(info2User[0]).to.be.bignumber.eq(ether('0'));
         expect(info2Someone[0]).to.be.bignumber.eq(ether('0'));
         // join after deposit
-        await this.fountain1.joinAngel(this.angel2.address, { from: someone });
+        await this.fountain.joinAngel(this.angel2.address, { from: someone });
         info2User = await this.angel2.userInfo.call(pid, user);
         info2Someone = await this.angel2.userInfo.call(pid, someone);
         expect(info2User[0]).to.be.bignumber.eq(ether('0'));
@@ -328,17 +332,17 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        await this.fountain1.deposit(depositAmount, { from: user });
+        await this.fountain.deposit(depositAmount, { from: user });
         await increase(seconds(300));
       });
 
@@ -347,7 +351,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         const info1Before = await this.angel1.userInfo.call(pid, user);
         const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
         // user withdraw
-        const receipt = await this.fountain1.withdraw(depositAmount, {
+        const receipt = await this.fountain.withdraw(depositAmount, {
           from: user,
         });
         expectEvent(receipt, 'Withdraw', [user, depositAmount, user]);
@@ -368,7 +372,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         const info1Before = await this.angel1.userInfo.call(pid, user);
         const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
         // user withdraw
-        const receipt = await this.fountain1.withdraw(ether('0'), {
+        const receipt = await this.fountain.withdraw(ether('0'), {
           from: user,
         });
         expectEvent(receipt, 'Withdraw', [user, ether('0'), user]);
@@ -392,30 +396,30 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         await this.angel2.add(
           new BN('10'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // join angel1
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        await this.fountain1.deposit(depositAmount, { from: user });
+        await this.fountain.deposit(depositAmount, { from: user });
         await increase(seconds(300));
       });
 
       it('harvest joined', async function() {
         // user harvest angel1
         const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
-        const receipt = await this.fountain1.harvest(this.angel1.address, {
+        const receipt = await this.fountain.harvest(this.angel1.address, {
           from: user,
         });
         expectEvent(receipt, 'Harvest', [user]);
@@ -425,12 +429,16 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         expect(pendingAfter).to.be.bignumber.eq(ether('0'));
         expect(info1After[1]).to.be.bignumber.eq(tokenUser);
         expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+        // harvest empty should be fine
+        await this.fountain.harvest(this.angel1.address, {
+          from: user,
+        });
       });
 
       it('harvest non-joined', async function() {
         // user harvest angel2
         const pendingBefore = await this.angel2.pendingSushi.call(pid, user);
-        const receipt = await this.fountain1.harvest(this.angel2.address, {
+        const receipt = await this.fountain.harvest(this.angel2.address, {
           from: user,
         });
         expectEvent(receipt, 'Harvest', [user]);
@@ -442,7 +450,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
       it('harvest all', async function() {
         // user harvest all
         const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
-        const receipt = await this.fountain1.harvestAll({ from: user });
+        const receipt = await this.fountain.harvestAll({ from: user });
         expectEvent(receipt, 'Harvest', [user]);
         const info1After = await this.angel1.userInfo.call(pid, user);
         const pendingAfter = await this.angel1.pendingSushi.call(pid, user);
@@ -452,10 +460,38 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         expect(tokenUser).to.be.bignumber.gte(pendingBefore);
       });
 
+      it('harvest with reward contract', async function() {
+        await this.rwdToken2.transfer(this.rewarder.address, ether('100000'), {
+          from: rewarder,
+        });
+        await this.angel1.set(pid, new BN('10'), this.rewarder.address, true, {
+          from: rewarder,
+        });
+        await this.stkToken.transfer(someone, ether('10'), { from: user });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: someone,
+        });
+        await this.fountain.joinAngel(this.angel1.address, { from: someone });
+        await this.fountain.deposit(ether('1'), { from: someone });
+        expect(await this.angel1.lpToken.call(new BN('0'))).to.be.equal(
+          this.stkToken.address
+        );
+        await increase(seconds(86400));
+        await this.fountain.withdraw(ether('1'), { from: someone });
+        let expectedReward = await this.angel1.pendingSushi.call(pid, someone);
+        expect((await this.angel1.userInfo(0, someone))[1]).to.be.bignumber.eq(
+          ether('0').sub(expectedReward)
+        );
+        await this.fountain.harvest(this.angel1.address, { from: someone });
+        expect(await this.rwdToken1.balanceOf.call(someone))
+          .to.be.bignumber.eq(await this.rwdToken2.balanceOf.call(someone))
+          .to.be.bignumber.eq(expectedReward);
+      });
+
       describe('harvest from', async function() {
         beforeEach(async function() {
           const timeLimit = (await latest()).add(seconds(86400));
-          await this.fountain1.harvestApprove(someone, timeLimit, {
+          await this.fountain.harvestApprove(someone, timeLimit, {
             from: user,
           });
         });
@@ -463,7 +499,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         it('harvest joined', async function() {
           // user harvest angel1
           const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
-          const receipt = await this.fountain1.harvestFrom(
+          const receipt = await this.fountain.harvestFrom(
             this.angel1.address,
             user,
             someone,
@@ -485,7 +521,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         it('harvest non-joined', async function() {
           // user harvest angel2
           const pendingBefore = await this.angel2.pendingSushi.call(pid, user);
-          const receipt = await this.fountain1.harvestFrom(
+          const receipt = await this.fountain.harvestFrom(
             this.angel2.address,
             user,
             someone,
@@ -504,7 +540,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         it('harvest all', async function() {
           // user harvest all
           const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
-          const receipt = await this.fountain1.harvestAllFrom(user, someone, {
+          const receipt = await this.fountain.harvestAllFrom(user, someone, {
             from: someone,
           });
           expectEvent(receipt, 'Harvest', [user]);
@@ -521,10 +557,10 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
       describe('harvest permit', async function() {
         it('normal', async function() {
-          const name = await this.fountain1.name.call();
+          const name = await this.fountain.name.call();
           const version = '1';
           const chainId = await web3.eth.getChainId();
-          const verifyingContract = this.fountain1.address;
+          const verifyingContract = this.fountain.address;
           const wallet = await web3.eth.accounts.create();
           const owner = wallet.address;
           const sender = someone;
@@ -544,7 +580,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             }
           );
           const { v, r, s } = fromRpcSig(signature);
-          const receipt = await this.fountain1.harvestPermit(
+          const receipt = await this.fountain.harvestPermit(
             owner,
             sender,
             timeLimit,
@@ -554,11 +590,11 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             s
           );
           expectEvent(receipt, 'HarvestApproval', [owner]);
-          expect(await this.fountain1.harvestNonces(owner)).to.be.bignumber.eq(
+          expect(await this.fountain.harvestNonces(owner)).to.be.bignumber.eq(
             '1'
           );
           expect(
-            await this.fountain1.harvestAllowance.call(owner, sender)
+            await this.fountain.harvestAllowance.call(owner, sender)
           ).to.be.bignumber.eq(timeLimit);
         });
       });
@@ -573,13 +609,13 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         let signature;
 
         beforeEach(async function() {
-          const name = await this.fountain1.name.call();
+          const name = await this.fountain.name.call();
           const version = '1';
           const chainId = await web3.eth.getChainId();
-          const verifyingContract = this.fountain1.address;
+          const verifyingContract = this.fountain.address;
           wallet = await web3.eth.accounts.create();
           owner = wallet.address;
-          await this.fountain1.transfer(wallet.address, depositAmount, {
+          await this.fountain.transfer(wallet.address, depositAmount, {
             from: user,
           });
           await increase(seconds(300));
@@ -606,7 +642,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             pid,
             wallet.address
           );
-          const receipt = await this.fountain1.harvestFromWithPermit(
+          const receipt = await this.fountain.harvestFromWithPermit(
             this.angel1.address,
             wallet.address,
             user,
@@ -647,7 +683,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             pid,
             wallet.address
           );
-          const receipt = await this.fountain1.harvestFromWithPermit(
+          const receipt = await this.fountain.harvestFromWithPermit(
             this.angel2.address,
             wallet.address,
             user,
@@ -679,7 +715,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             pid,
             wallet.address
           );
-          const receipt = await this.fountain1.harvestAllFromWithPermit(
+          const receipt = await this.fountain.harvestAllFromWithPermit(
             wallet.address,
             user,
             timeLimit,
@@ -719,17 +755,17 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('1000'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        await this.fountain1.deposit(depositAmount, { from: user });
+        await this.fountain.deposit(depositAmount, { from: user });
         await increase(seconds(300));
       });
 
@@ -737,7 +773,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // check joined angel user balance
         const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
         // user emergency withdraw
-        const receipt = await this.fountain1.emergencyWithdraw({ from: user });
+        const receipt = await this.fountain.emergencyWithdraw({ from: user });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
@@ -758,30 +794,30 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         // Add from Angel
         await this.angel1.add(
           new BN('1000'),
-          this.stkToken1.address,
+          this.stkToken.address,
           ZERO_ADDRESS,
           { from: rewarder }
         );
         // join angel
-        await this.fountain1.joinAngel(this.angel1.address, { from: user });
+        await this.fountain.joinAngel(this.angel1.address, { from: user });
         // user deposit
-        await this.stkToken1.approve(this.fountain1.address, depositAmount, {
+        await this.stkToken.approve(this.fountain.address, depositAmount, {
           from: user,
         });
-        await this.fountain1.deposit(depositAmount, { from: user });
+        await this.fountain.deposit(depositAmount, { from: user });
         await increase(seconds(300));
       });
 
       describe('transfer', function() {
         it('normal', async function() {
-          await this.fountain1.transfer(someone, depositAmount, { from: user });
+          await this.fountain.transfer(someone, depositAmount, { from: user });
         });
       });
 
       describe('transfer from', function() {
         it('normal', async function() {
-          await this.fountain1.approve(someone, depositAmount, { from: user });
-          await this.fountain1.transferFrom(user, someone, depositAmount, {
+          await this.fountain.approve(someone, depositAmount, { from: user });
+          await this.fountain.transferFrom(user, someone, depositAmount, {
             from: someone,
           });
         });
@@ -789,10 +825,10 @@ contract('Fountain', function([_, user, someone, rewarder]) {
 
       describe('permit', function() {
         it('normal', async function() {
-          const name = await this.fountain1.name.call();
+          const name = await this.fountain.name.call();
           const version = '1';
           const chainId = await web3.eth.getChainId();
-          const verifyingContract = this.fountain1.address;
+          const verifyingContract = this.fountain.address;
           const wallet = await web3.eth.accounts.create();
           const owner = wallet.address;
           const spender = someone;
@@ -812,7 +848,7 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             }
           );
           const { v, r, s } = fromRpcSig(signature);
-          const receipt = await this.fountain1.permit(
+          const receipt = await this.fountain.permit(
             owner,
             spender,
             value,
@@ -821,19 +857,19 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             r,
             s
           );
-          expect(await this.fountain1.nonces(owner)).to.be.bignumber.eq('1');
+          expect(await this.fountain.nonces(owner)).to.be.bignumber.eq('1');
           expect(
-            await this.fountain1.allowance(owner, spender)
+            await this.fountain.allowance(owner, spender)
           ).to.be.bignumber.eq(value);
         });
       });
 
       describe('permit and transferFrom', function() {
         it('normal', async function() {
-          const name = await this.fountain1.name.call();
+          const name = await this.fountain.name.call();
           const version = '1';
           const chainId = await web3.eth.getChainId();
-          const verifyingContract = this.fountain1.address;
+          const verifyingContract = this.fountain.address;
           const wallet = await web3.eth.accounts.create();
           const owner = wallet.address;
           const spender = someone;
@@ -854,8 +890,8 @@ contract('Fountain', function([_, user, someone, rewarder]) {
           );
           const { v, r, s } = fromRpcSig(signature);
           // Prepare token
-          await this.fountain1.transfer(owner, value, { from: user });
-          await this.fountain1.transferFromWithPermit(
+          await this.fountain.transfer(owner, value, { from: user });
+          await this.fountain.transferFromWithPermit(
             owner,
             user,
             value,
@@ -865,13 +901,11 @@ contract('Fountain', function([_, user, someone, rewarder]) {
             s,
             { from: spender }
           );
-          expect(await this.fountain1.nonces(owner)).to.be.bignumber.eq('1');
+          expect(await this.fountain.nonces(owner)).to.be.bignumber.eq('1');
           expect(
-            await this.fountain1.allowance(owner, spender)
+            await this.fountain.allowance(owner, spender)
           ).to.be.bignumber.eq(ether('0'));
-          expect(await this.fountain1.balanceOf(user)).to.be.bignumber.eq(
-            value
-          );
+          expect(await this.fountain.balanceOf(user)).to.be.bignumber.eq(value);
         });
       });
     });
