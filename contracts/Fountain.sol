@@ -63,11 +63,11 @@ contract Fountain is FountainBase {
      *
      * - `sender` cannot be the zero address.
      */
-    function harvestApprove(address sender, uint256 amount)
+    function harvestApprove(address sender, uint256 timeLimit)
         public
         returns (bool)
     {
-        _harvestApprove(_msgSender(), sender, amount);
+        _harvestApprove(_msgSender(), sender, timeLimit);
         return true;
     }
 
@@ -114,7 +114,7 @@ contract Fountain is FountainBase {
         address from,
         address to
     ) public canHarvestFrom(from) {
-        _harvest(angel, from, to);
+        _harvestAngel(angel, from, to);
     }
 
     /// @notice User may harvest from all the joined angels of permitted user
@@ -125,7 +125,7 @@ contract Fountain is FountainBase {
         IAngel[] memory angels = joinedAngel(from);
         for (uint256 i = 0; i < angels.length; i++) {
             IAngel angel = angels[i];
-            _harvest(angel, from, to);
+            _harvestAngel(angel, from, to);
         }
     }
 
@@ -157,7 +157,8 @@ contract Fountain is FountainBase {
     }
 
     /**
-     * @dev Sets `amount` as the allowance of `sender` over the `owner` s tokens.
+     * @dev Sets `timeLimit` as the time allowance of `sender` over the
+     * `owner` s tokens.
      *
      * This internal function is equivalent to `approve`, and can be used to
      * e.g. set automatic allowances for certain subsystems, etc.
@@ -172,12 +173,12 @@ contract Fountain is FountainBase {
     function _harvestApprove(
         address owner,
         address sender,
-        uint256 amount
+        uint256 timeLimit
     ) internal {
         require(owner != address(0), "Fountain: approve from the zero address");
         require(sender != address(0), "Fountain: approve to the zero address");
 
-        _allowances[owner][sender] = amount;
-        emit Approval(owner, sender, amount);
+        _allowances[owner][sender] = timeLimit;
+        emit Approval(owner, sender, timeLimit);
     }
 }
