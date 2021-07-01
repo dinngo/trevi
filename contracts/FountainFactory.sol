@@ -11,6 +11,7 @@ contract FountainFactory {
     IArchangel public immutable archangel;
     /// @dev Token and Fountain should be 1-1 and only
     mapping(IERC20 => Fountain) private _fountains;
+    mapping(Fountain => IERC20) private _stakings;
 
     event Created(address to);
 
@@ -20,9 +21,7 @@ contract FountainFactory {
 
     // Getters
     function isValid(Fountain fountain) external view returns (bool) {
-        IERC20 token = fountain.stakingToken();
-
-        return (_fountains[token] == fountain);
+        return (address(_stakings[fountain]) != address(0));
     }
 
     function fountainOf(IERC20 token) external view returns (Fountain) {
@@ -36,6 +35,7 @@ contract FountainFactory {
         string memory symbol = _concat("FTN-", token.symbol());
         Fountain fountain = new Fountain(token, name, symbol);
         _fountains[token] = fountain;
+        _stakings[fountain] = token;
 
         emit Created(address(fountain));
     }

@@ -19,7 +19,7 @@ const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 
-contract('Fountain factory', function([_, user]) {
+contract('Fountain factory', function([_, user, someone]) {
   beforeEach(async function() {
     this.archangel = await Archangel.new();
     const angelFactory = await this.archangel.angelFactory.call();
@@ -54,12 +54,20 @@ contract('Fountain factory', function([_, user]) {
       const fountainAddress = await this.fountainFactory.fountainOf.call(
         this.token1.address
       );
-      expect(await this.fountainFactory.isValid(fountainAddress)).to.be.true;
+      expect(
+        await this.fountainFactory.isValid.call(fountainAddress)
+      ).to.be.true;
     });
 
     it('not created by factory', async function() {
       const fountain = await Fountain.new(this.token1.address, 'TEST', 'TST');
-      expect(await this.fountainFactory.isValid(fountain.address)).to.be.false;
+      expect(
+        await this.fountainFactory.isValid.call(fountain.address)
+      ).to.be.false;
+    });
+
+    it('not fountain', async function() {
+      expect(await this.fountainFactory.isValid.call(someone)).to.be.false;
     });
   });
 
