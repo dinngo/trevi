@@ -105,7 +105,7 @@ contract FountainBase is FountainToken {
     /// @notice User may harvest from any angel.
     function harvest(IAngel angel) external {
         // TODO: Should verify is the angel is valid
-        _harvest(angel, _msgSender(), _msgSender());
+        _harvestAngel(angel, _msgSender(), _msgSender());
     }
 
     /// @notice User may harvest from all the joined angels.
@@ -114,7 +114,7 @@ contract FountainBase is FountainToken {
         IAngel[] storage angels = _joinAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
             IAngel angel = angels[i];
-            _harvest(angel, _msgSender(), _msgSender());
+            _harvestAngel(angel, _msgSender(), _msgSender());
         }
     }
 
@@ -223,7 +223,7 @@ contract FountainBase is FountainToken {
         info.totalBalance = info.totalBalance.sub(amount);
     }
 
-    function _harvest(
+    function _harvestAngel(
         IAngel angel,
         address from,
         address to
@@ -237,7 +237,7 @@ contract FountainBase is FountainToken {
         AngelInfo storage info = _angelInfos[angel];
         require(info.isSet, "Fountain: not added by angel");
         uint256 amount = balanceOf(account);
-        info.totalBalance = info.totalBalance.sub(amount);
         angel.emergencyWithdraw(info.pid, account);
+        info.totalBalance = info.totalBalance.sub(amount);
     }
 }
