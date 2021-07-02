@@ -3,6 +3,7 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "./libraries/ReentrancyGuard.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
 import "./interfaces/IAngel.sol";
@@ -11,7 +12,7 @@ import "./FountainToken.sol";
 
 // TODO: delegate executions
 /// @title Staking vault of lpTokens
-contract FountainBase is FountainToken {
+contract FountainBase is FountainToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -221,7 +222,7 @@ contract FountainBase is FountainToken {
         address account,
         IAngel angel,
         uint256 amount
-    ) internal {
+    ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
         require(info.isSet, "Fountain: not added by angel");
         angel.deposit(info.pid, amount, account);
@@ -232,7 +233,7 @@ contract FountainBase is FountainToken {
         address account,
         IAngel angel,
         uint256 amount
-    ) internal {
+    ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
         require(info.isSet, "Fountain: not added by angel");
         angel.withdraw(info.pid, amount, account);
@@ -243,13 +244,16 @@ contract FountainBase is FountainToken {
         IAngel angel,
         address from,
         address to
-    ) internal {
+    ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
         require(info.isSet, "Fountain: not added by angel");
         angel.harvest(info.pid, from, to);
     }
 
-    function _emergencyWithdrawAngel(address account, IAngel angel) internal {
+    function _emergencyWithdrawAngel(address account, IAngel angel)
+        internal
+        nonReentrant
+    {
         AngelInfo storage info = _angelInfos[angel];
         require(info.isSet, "Fountain: not added by angel");
         uint256 amount = balanceOf(account);
