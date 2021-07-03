@@ -7,9 +7,10 @@ import "./ERC20FlashLoan.sol";
 
 contract Fountain is FountainPermit, ERC20FlashLoan {
     modifier onlyArchangel {
-        require(
+        _requireMsg(
             _msgSender() == address(archangel),
-            "Fountain: not from archangel"
+            "general",
+            "not from archangel"
         );
         _;
     }

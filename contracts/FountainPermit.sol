@@ -37,9 +37,10 @@ abstract contract FountainPermit is FountainBase {
     );
 
     modifier canHarvestFrom(address owner) {
-        require(
+        _requireMsg(
             block.timestamp <= _timeLimits[owner][_msgSender()],
-            "Fountain: harvest not allowed"
+            "general",
+            "harvest not allowed"
         );
         _;
     }
@@ -75,7 +76,11 @@ abstract contract FountainPermit is FountainBase {
         bytes32 s
     ) public {
         // solhint-disable-next-line not-rely-on-time
-        require(block.timestamp <= deadline, "Fountain: expired deadline");
+        _requireMsg(
+            block.timestamp <= deadline,
+            "harvestPermit",
+            "expired deadline"
+        );
 
         bytes32 structHash =
             keccak256(
@@ -92,7 +97,7 @@ abstract contract FountainPermit is FountainBase {
         bytes32 hash = _hashTypedDataV4(structHash);
 
         address signer = ECDSA.recover(hash, v, r, s);
-        require(signer == owner, "Fountain: invalid signature");
+        _requireMsg(signer == owner, "harvestPermit", "invalid signature");
 
         _nonces[owner].increment();
         _harvestApprove(owner, sender, timeLimit);
@@ -171,8 +176,16 @@ abstract contract FountainPermit is FountainBase {
         address sender,
         uint256 timeLimit
     ) internal {
-        require(owner != address(0), "Fountain: approve from the zero address");
-        require(sender != address(0), "Fountain: approve to the zero address");
+        _requireMsg(
+            owner != address(0),
+            "_harvestApprove",
+            "approve from the zero address"
+        );
+        _requireMsg(
+            sender != address(0),
+            "_harvesrApprove",
+            "approve to the zero address"
+        );
 
         _timeLimits[owner][sender] = timeLimit;
         emit HarvestApproval(owner, sender, timeLimit);

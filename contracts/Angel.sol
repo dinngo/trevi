@@ -8,7 +8,11 @@ import "./ERC20FlashLoan.sol";
 
 contract Angel is AngelBase, ERC20FlashLoan {
     modifier onlyArchangel() {
-        require(msg.sender == address(archangel), "Angel: not from archangel");
+        _requireMsg(
+            msg.sender == address(archangel),
+            "general",
+            "not from archangel"
+        );
         _;
     }
 

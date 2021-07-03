@@ -5,9 +5,10 @@ pragma solidity 0.6.12;
 import "./Fountain.sol";
 import "./interfaces/IArchangel.sol";
 import "./interfaces/IFountainFactory.sol";
+import "./utils/ErrorMsg.sol";
 
 /// @title The factory of Fountain
-contract FountainFactory {
+contract FountainFactory is ErrorMsg {
     IArchangel public immutable archangel;
     /// @dev Token and Fountain should be 1-1 and only
     mapping(IERC20 => Fountain) private _fountains;
@@ -20,6 +21,10 @@ contract FountainFactory {
     }
 
     // Getters
+    function getContractName() public pure override returns (string memory) {
+        return "FountainFactory";
+    }
+
     function isValid(Fountain fountain) external view returns (bool) {
         return (address(_stakings[fountain]) != address(0));
     }
@@ -30,7 +35,11 @@ contract FountainFactory {
 
     /// @notice Create Fountain for token.
     function create(ERC20 token) external returns (Fountain) {
-        require(address(_fountains[token]) == address(0), "fountain existed");
+        _requireMsg(
+            address(_fountains[token]) == address(0),
+            "create",
+            "fountain existed"
+        );
         string memory name = _concat("Fountain ", token.name());
         string memory symbol = _concat("FTN-", token.symbol());
         Fountain fountain = new Fountain(token, name, symbol);

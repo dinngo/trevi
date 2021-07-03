@@ -12,20 +12,13 @@ import "./interfaces/IMasterChef.sol";
 import "./interfaces/IAngelFactory.sol";
 import "./interfaces/IArchangel.sol";
 import "./interfaces/IFountain.sol";
-
-/**
-interface IMigratorChef {
-    // Take the current LP token address and return the new LP token address.
-    // Migrator should have full access to the caller's LP token.
-    function migrate(IERC20 token) external returns (IERC20);
-}
-*/
+import "./utils/ErrorMsg.sol";
 
 /// @notice Angel is a forked version of MiniChefV2 from SushiSwap with
 /// minimal modifications to interact with fountain in Trevi. The staking
 /// tokens are managed in fountain instead of here. Migrate related functions
 /// withdrawAndHarvest are removed.
-contract AngelBase is BoringOwnable, BoringBatchable {
+contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     using BoringMath for uint256;
     using BoringMath128 for uint128;
     using BoringERC20 for IERC20;
@@ -111,9 +104,10 @@ contract AngelBase is BoringOwnable, BoringBatchable {
     event LogSushiPerSecond(uint256 sushiPerSecond);
 
     modifier onlyFountain(uint256 pid) {
-        require(
+        _requireMsg(
             msg.sender == archangel.getFountain(address(lpToken[pid])),
-            "Angel: not called by correct fountain"
+            "General",
+            "not called by correct fountain"
         );
         _;
     }
@@ -124,6 +118,10 @@ contract AngelBase is BoringOwnable, BoringBatchable {
         IAngelFactory _f = IAngelFactory(msg.sender);
         factory = _f;
         archangel = IArchangel(_f.archangel());
+    }
+
+    function getContractName() public pure override returns (string memory) {
+        return "Angel";
     }
 
     /// @notice Returns the number of MCV2 pools.

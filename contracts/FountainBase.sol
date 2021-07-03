@@ -10,10 +10,11 @@ import "./interfaces/IArchangel.sol";
 import "./interfaces/IAngel.sol";
 import "./interfaces/IFountain.sol";
 import "./interfaces/IFountainFactory.sol";
+import "./utils/ErrorMsg.sol";
 import "./FountainToken.sol";
 
 /// @title Staking vault of lpTokens
-abstract contract FountainBase is FountainToken, ReentrancyGuard {
+abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -55,13 +56,17 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
     }
 
     // Getters
+    function getContractName() public pure override returns (string memory) {
+        return "Fountain";
+    }
+
     function joinedAngel(address user) public view returns (IAngel[] memory) {
         return _joinedAngels[user];
     }
 
     function angelInfo(IAngel angel) public view returns (uint256, uint256) {
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet, "Fountain: angel not set");
+        _requireMsg(info.isSet, "angelInfo", "Fountain: angel not set");
         return (info.pid, info.totalBalance);
     }
 
@@ -71,9 +76,10 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(_msgSender());
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet == false, "Fountain: angel is set");
-        require(
+        _requireMsg(info.isSet == false, "setPoolId", "Fountain: angel is set");
+        _requireMsg(
             angel.lpToken(pid) == address(stakingToken),
+            "setPoolId",
             "Fountain: token not matched"
         );
         info.isSet = true;
@@ -178,7 +184,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
                 }
             }
         }
-        require(angels.length != len, "Fountain: unjoined angel");
+        _requireMsg(
+            angels.length != len,
+            "quitAngel",
+            "Fountain: unjoined angel"
+        );
 
         emit Quitted(_msgSender(), address(angel));
 
@@ -237,7 +247,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
         uint256 amount
     ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet, "Fountain: not added by angel");
+        _requireMsg(
+            info.isSet,
+            "_depositAngel",
+            "Fountain: not added by angel"
+        );
         angel.deposit(info.pid, amount, account);
         info.totalBalance = info.totalBalance.add(amount);
     }
@@ -248,7 +262,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
         uint256 amount
     ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet, "Fountain: not added by angel");
+        _requireMsg(
+            info.isSet,
+            "_withdrawAngel",
+            "Fountain: not added by angel"
+        );
         angel.withdraw(info.pid, amount, account);
         info.totalBalance = info.totalBalance.sub(amount);
     }
@@ -259,7 +277,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
         address to
     ) internal nonReentrant {
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet, "Fountain: not added by angel");
+        _requireMsg(
+            info.isSet,
+            "_harvestAngel",
+            "Fountain: not added by angel"
+        );
         angel.harvest(info.pid, from, to);
     }
 
@@ -268,7 +290,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
         nonReentrant
     {
         AngelInfo storage info = _angelInfos[angel];
-        require(info.isSet, "Fountain: not added by angel");
+        _requireMsg(
+            info.isSet,
+            "_emergencyAngel",
+            "Fountain: not added by angel"
+        );
         uint256 amount = balanceOf(account);
         angel.emergencyWithdraw(info.pid, account);
         info.totalBalance = info.totalBalance.sub(amount);
@@ -277,7 +303,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
     function _joinAngel(IAngel angel) internal {
         IAngel[] storage angels = _joinedAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
-            require(angels[i] != angel);
+            _requireMsg(angels[i] != angel, "_joinAngel", "Angel joined");
         }
         angels.push(angel);
 
