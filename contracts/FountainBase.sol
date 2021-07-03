@@ -26,7 +26,7 @@ contract FountainBase is FountainToken {
     }
 
     /// @dev The angels that user joined
-    mapping(address => IAngel[]) private _joinAngels;
+    mapping(address => IAngel[]) private _joinedAngels;
     /// @dev The information of angels
     mapping(IAngel => AngelInfo) private _angelInfos;
 
@@ -52,7 +52,7 @@ contract FountainBase is FountainToken {
 
     // Getters
     function joinedAngel(address user) public view returns (IAngel[] memory) {
-        return _joinAngels[user];
+        return _joinedAngels[user];
     }
 
     function angelInfo(IAngel angel) public view returns (uint256, uint256) {
@@ -125,7 +125,7 @@ contract FountainBase is FountainToken {
     /// @notice User may harvest from all the joined angels.
     function harvestAll() external {
         // Call joined angel
-        IAngel[] storage angels = _joinAngels[_msgSender()];
+        IAngel[] storage angels = _joinedAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
             IAngel angel = angels[i];
             _harvestAngel(angel, _msgSender(), _msgSender());
@@ -147,23 +147,19 @@ contract FountainBase is FountainToken {
 
     /// @notice Join the given angel's program.
     function joinAngel(IAngel angel) external {
-        // TODO: Should verify if the angel is valid
-        IAngel[] storage angels = _joinAngels[_msgSender()];
+        _joinAngel(angel);
+    }
+
+    /// @notice Join the given angel's program.
+    function joinAngels(IAngel[] calldata angels) external {
         for (uint256 i = 0; i < angels.length; i++) {
-            require(angels[i] != angel);
+            _joinAngel(angels[i]);
         }
-        angels.push(angel);
-
-        emit Joined(_msgSender(), address(angel));
-
-        // Update user info at angel
-        _depositAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 
     /// @notice Quit the given angel's program.
     function quitAngel(IAngel angel) external {
-        // TODO: Should verify if the angel is valid
-        IAngel[] storage angels = _joinAngels[_msgSender()];
+        IAngel[] storage angels = _joinedAngels[_msgSender()];
         uint256 len = angels.length;
         if (angels[len - 1] == angel) {
             angels.pop();
@@ -184,6 +180,18 @@ contract FountainBase is FountainToken {
         _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 
+    /// @notice Quit the given angel's program.
+    function quitAllAngel() external {
+        IAngel[] storage angels = _joinedAngels[_msgSender()];
+        for (uint256 i = 0; i < angels.length; i++) {
+            IAngel angel = angels[i];
+            emit Quitted(_msgSender(), address(angel));
+            // Update user info at angel
+            _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
+        }
+        delete _joinedAngels[_msgSender()];
+    }
+
     /// @notice Withdraw for the sender and deposit for the receiver
     /// when token amount changes. When the amount is UINT256_MAX,
     /// trigger emergencyWithdraw instead of withdraw.
@@ -193,7 +201,7 @@ contract FountainBase is FountainToken {
         uint256 amount
     ) internal override {
         if (from != address(0)) {
-            IAngel[] storage angels = _joinAngels[from];
+            IAngel[] storage angels = _joinedAngels[from];
             if (amount < type(uint256).max) {
                 for (uint256 i = 0; i < angels.length; i++) {
                     IAngel angel = angels[i];
@@ -207,7 +215,7 @@ contract FountainBase is FountainToken {
             }
         }
         if (to != address(0)) {
-            IAngel[] storage angels = _joinAngels[to];
+            IAngel[] storage angels = _joinedAngels[to];
             for (uint256 i = 0; i < angels.length; i++) {
                 IAngel angel = angels[i];
                 _depositAngel(to, angel, amount);
@@ -255,5 +263,18 @@ contract FountainBase is FountainToken {
         uint256 amount = balanceOf(account);
         angel.emergencyWithdraw(info.pid, account);
         info.totalBalance = info.totalBalance.sub(amount);
+    }
+
+    function _joinAngel(IAngel angel) internal {
+        IAngel[] storage angels = _joinedAngels[_msgSender()];
+        for (uint256 i = 0; i < angels.length; i++) {
+            require(angels[i] != angel);
+        }
+        angels.push(angel);
+
+        emit Joined(_msgSender(), address(angel));
+
+        // Update user info at angel
+        _depositAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 }

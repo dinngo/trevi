@@ -162,6 +162,41 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         expect(angels[0]).eq(this.angel1.address);
       });
 
+      it('multiple angels', async function() {
+        // Add from Angel
+        await this.angel1.add(
+          new BN('10'),
+          this.stkToken.address,
+          ZERO_ADDRESS,
+          { from: rewarder }
+        );
+        // Add from Angel
+        await this.angel2.add(
+          new BN('10'),
+          this.stkToken.address,
+          ZERO_ADDRESS,
+          { from: rewarder }
+        );
+        // user join angel from fountain
+        const receipt = await this.fountain.joinAngels(
+          [this.angel1.address, this.angel2.address],
+          {
+            from: user,
+          }
+        );
+        expectEvent(receipt, 'Joined', {
+          user: user,
+          angel: this.angel1.address,
+        });
+        expectEvent(receipt, 'Joined', {
+          user: user,
+          angel: this.angel2.address,
+        });
+        const angels = await this.fountain.joinedAngel.call(user);
+        expect(angels[0]).eq(this.angel1.address);
+        expect(angels[1]).eq(this.angel2.address);
+      });
+
       it('Not added from angel', async function() {
         // user join angel from fountain
         await expectRevert(
@@ -196,6 +231,32 @@ contract('Fountain', function([_, user, someone, rewarder]) {
         expectEvent(receipt, 'Quitted', {
           user: user,
           angel: this.angel1.address,
+        });
+      });
+
+      it('all', async function() {
+        // Add from Angel
+        await this.angel2.add(
+          new BN('10'),
+          this.stkToken.address,
+          ZERO_ADDRESS,
+          { from: rewarder }
+        );
+        // user join angel from fountain
+        await this.fountain.joinAngel(this.angel2.address, {
+          from: user,
+        });
+        // user quit angel from fountain
+        const receipt = await this.fountain.quitAllAngel({
+          from: user,
+        });
+        expectEvent(receipt, 'Quitted', {
+          user: user,
+          angel: this.angel1.address,
+        });
+        expectEvent(receipt, 'Quitted', {
+          user: user,
+          angel: this.angel2.address,
         });
       });
 
