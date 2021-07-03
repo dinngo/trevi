@@ -26,7 +26,7 @@ contract Angel is AngelBase, ERC20FlashLoan {
         super.setFlashLoanFee(fee);
     }
 
-    function feeCollector() public view override returns (address) {
+    function flashLoanFeeCollector() public view override returns (address) {
         return address(archangel);
     }
 }

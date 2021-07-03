@@ -19,7 +19,7 @@ contract ERC20FlashLoanMock is ERC20FlashLoan {
         }
     }
 
-    function feeCollector() public view override returns (address) {
+    function flashLoanFeeCollector() public view override returns (address) {
         return collector;
     }
 }

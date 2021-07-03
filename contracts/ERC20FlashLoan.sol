@@ -90,13 +90,13 @@ contract ERC20FlashLoan is IFlashLender {
             address(this),
             totalDebt
         );
-        address collector = feeCollector();
+        address collector = flashLoanFeeCollector();
         if (collector != address(0)) lendingToken.safeTransfer(collector, fee);
 
         return true;
     }
 
-    function feeCollector() public view virtual override returns (address) {
+    function flashLoanFeeCollector() public view virtual override returns (address) {
         this;
         return address(0);
     }
