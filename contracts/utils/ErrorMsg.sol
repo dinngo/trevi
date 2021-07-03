@@ -9,20 +9,20 @@ abstract contract ErrorMsg {
         bool condition,
         string memory functionName,
         string memory reason
-    ) internal view {
+    ) internal pure {
         if (!condition) _revertMsg(functionName, reason);
     }
 
     function _requireMsg(bool condition, string memory functionName)
         internal
-        view
+        pure
     {
         if (!condition) _revertMsg(functionName);
     }
 
     function _revertMsg(string memory functionName, string memory reason)
         internal
-        view
+        pure
     {
         revert(
             string(
@@ -37,7 +37,7 @@ abstract contract ErrorMsg {
         );
     }
 
-    function _revertMsg(string memory functionName) internal view {
+    function _revertMsg(string memory functionName) internal pure {
         _revertMsg(functionName, "Unspecified");
     }
 }
