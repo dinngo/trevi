@@ -30,7 +30,14 @@ contract('Angel factory', function([_, user]) {
     this.token2 = await SimpleToken.new('Reward', 'RWD', ether('1000000000'));
   });
 
-  describe('Create', function() {});
+  describe('Create', function() {
+    it('should revert if zero address reward', async function () {
+      await expectRevert(
+        this.angelFactory.create(ZERO_ADDRESS),
+        'zero address reward'
+      );
+    });
+  });
 
   describe('Is valid', function() {});
 
