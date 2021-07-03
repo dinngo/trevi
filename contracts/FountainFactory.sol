@@ -42,7 +42,12 @@ contract FountainFactory is ErrorMsg {
         );
         string memory name = _concat("Fountain ", token.name());
         string memory symbol = _concat("FTN-", token.symbol());
-        Fountain fountain = new Fountain(token, name, symbol);
+        Fountain fountain = new Fountain(
+            token,
+            name,
+            symbol,
+            archangel.defaultFlashLoanFee()
+        );
         _fountains[token] = fountain;
         _stakings[fountain] = token;
 

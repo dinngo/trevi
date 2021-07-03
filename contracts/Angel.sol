@@ -16,13 +16,17 @@ contract Angel is AngelBase, ERC20FlashLoan {
         _;
     }
 
-    constructor(IERC20 token) public AngelBase(token) ERC20FlashLoan(token) {}
+    constructor(IERC20 token, uint256 flashLoanFee)
+        public
+        AngelBase(token)
+        ERC20FlashLoan(token, flashLoanFee)
+    {}
 
-    function setFee(uint256 rate) public override onlyArchangel {
-        super.setFee(rate);
+    function setFlashLoanFee(uint256 fee) public override onlyArchangel {
+        super.setFlashLoanFee(fee);
     }
 
-    function feeCollector() public view override returns (address) {
+    function flashLoanFeeCollector() public view override returns (address) {
         return address(archangel);
     }
 }

@@ -12,12 +12,10 @@ import "./libraries/SafeERC20.sol";
 /// @title Staking system manager
 contract Archangel is Ownable {
     using SafeERC20 for IERC20;
+
     AngelFactory public immutable angelFactory;
     FountainFactory public immutable fountainFactory;
-
-    mapping(address => uint256) private _fee;
-
-    uint256 public constant BASE_FEE = 100;
+    uint256 public defaultFlashLoanFee = 100;
 
     constructor() public {
         angelFactory = new AngelFactory();
@@ -44,11 +42,11 @@ contract Archangel is Ownable {
         }
     }
 
-    function baseFee() public pure returns (uint256) {
-        return BASE_FEE;
+    function setDefaultFlashLoanFee(uint256 fee) external onlyOwner {
+        defaultFlashLoanFee = fee;
     }
 
-    function setFee(address lender, uint256 feeRate) external onlyOwner {
-        IFlashLender(lender).setFee(feeRate);
+    function setFlashLoanFee(address lender, uint256 fee) external onlyOwner {
+        IFlashLender(lender).setFlashLoanFee(fee);
     }
 }

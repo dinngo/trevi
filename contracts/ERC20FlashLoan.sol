@@ -11,16 +11,14 @@ contract ERC20FlashLoan is IFlashLender {
     using SafeMath for uint256;
 
     IERC20 public immutable lendingToken;
-    uint256 public feeRate;
-
+    uint256 public flashLoanFee;
     uint256 public constant FEE_BASE = 1e4;
-    uint256 public constant BASE_FEE_RATE = 100;
     bytes32 private constant _RETURN_VALUE =
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
-    constructor(IERC20 token) public {
+    constructor(IERC20 token, uint256 fee) public {
         lendingToken = token;
-        feeRate = BASE_FEE_RATE;
+        flashLoanFee = fee;
     }
 
     /**
@@ -49,12 +47,11 @@ contract ERC20FlashLoan is IFlashLender {
     function flashFee(address token, uint256 amount)
         public
         view
-        virtual
         override
         returns (uint256)
     {
         require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
-        return amount.mul(feeRate).div(FEE_BASE);
+        return amount.mul(flashLoanFee).div(FEE_BASE);
     }
 
     /**
@@ -78,8 +75,10 @@ contract ERC20FlashLoan is IFlashLender {
                 _RETURN_VALUE,
             "ERC20FlashLoan: invalid return value"
         );
-        uint256 currentAllowance =
-            lendingToken.allowance(address(receiver), address(this));
+        uint256 currentAllowance = lendingToken.allowance(
+            address(receiver),
+            address(this)
+        );
         uint256 totalDebt = amount.add(fee);
         require(
             currentAllowance >= totalDebt,
@@ -91,19 +90,19 @@ contract ERC20FlashLoan is IFlashLender {
             address(this),
             totalDebt
         );
-        address collector = feeCollector();
+        address collector = flashLoanFeeCollector();
         if (collector != address(0)) lendingToken.safeTransfer(collector, fee);
 
         return true;
     }
 
-    function feeCollector() public view virtual override returns (address) {
+    function flashLoanFeeCollector() public view virtual override returns (address) {
         this;
         return address(0);
     }
 
-    function setFee(uint256 rate) public virtual override {
-        require(rate <= FEE_BASE, "ERC20FlashLoan: rate exceeded");
-        feeRate = rate;
+    function setFlashLoanFee(uint256 fee) public virtual override {
+        require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
+        flashLoanFee = fee;
     }
 }
