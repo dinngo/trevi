@@ -102,7 +102,7 @@ contract ERC20FlashLoan is IFlashLender {
     }
 
     function setFlashLoanFee(uint256 fee) public virtual override {
-        require(fee <= FEE_BASE, "ERC20FlashLoan: fee exceeded");
+        require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
         flashLoanFee = fee;
     }
 }

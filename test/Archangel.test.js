@@ -79,13 +79,13 @@ contract('Archangel', function([_, user, owner]) {
       );
     });
 
-    it('fee exceeded', async function() {
+    it('fee rate exceeded', async function() {
       const fee = new BN('50000');
       await expectRevert(
         this.archangel.setFlashLoanFee(this.fountain.address, fee, {
           from: owner,
         }),
-        'fee exceeded'
+        'fee rate exceeded'
       );
     });
   });
