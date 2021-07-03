@@ -13,15 +13,18 @@ import "./interfaces/IAngelFactory.sol";
 import "./interfaces/IArchangel.sol";
 import "./interfaces/IFountain.sol";
 
+/**
 interface IMigratorChef {
     // Take the current LP token address and return the new LP token address.
     // Migrator should have full access to the caller's LP token.
     function migrate(IERC20 token) external returns (IERC20);
 }
+*/
 
 /// @notice Angel is a forked version of MiniChefV2 from SushiSwap with
 /// minimal modifications to interact with fountain in Trevi. The staking
-/// tokens are managed in fountain instead of here.
+/// tokens are managed in fountain instead of here. Migrate related functions
+/// withdrawAndHarvest are removed.
 contract AngelBase is BoringOwnable, BoringBatchable {
     using BoringMath for uint256;
     using BoringMath128 for uint128;
@@ -48,7 +51,6 @@ contract AngelBase is BoringOwnable, BoringBatchable {
     /// @notice Address of SUSHI contract.
     IERC20 public immutable SUSHI;
     // @notice The migrator contract. It has a lot of power. Can only be set through governance (owner).
-    IMigratorChef public migrator;
 
     /// @notice Info of each MCV2 pool.
     PoolInfo[] public poolInfo;
@@ -193,34 +195,6 @@ contract AngelBase is BoringOwnable, BoringBatchable {
     function setSushiPerSecond(uint256 _sushiPerSecond) public onlyOwner {
         sushiPerSecond = _sushiPerSecond;
         emit LogSushiPerSecond(_sushiPerSecond);
-    }
-
-    /// @notice Set the `migrator` contract. Can only be called by the owner.
-    /// @param _migrator The contract address to set.
-    function setMigrator(IMigratorChef _migrator) public onlyOwner {
-        // Disable migrate related functions
-        revert("no migrate");
-        migrator = _migrator;
-    }
-
-    /// @notice Migrate LP token to another LP contract through the `migrator` contract.
-    /// @param _pid The index of the pool. See `poolInfo`.
-    function migrate(uint256 _pid) public {
-        // Disable migrate related functions
-        revert("no migrate");
-        require(
-            address(migrator) != address(0),
-            "MasterChefV2: no migrator set"
-        );
-        IERC20 _lpToken = lpToken[_pid];
-        uint256 bal = _lpToken.balanceOf(address(this));
-        _lpToken.approve(address(migrator), bal);
-        IERC20 newLpToken = migrator.migrate(_lpToken);
-        require(
-            bal == newLpToken.balanceOf(address(this)),
-            "MasterChefV2: migrated balance must match"
-        );
-        lpToken[_pid] = newLpToken;
     }
 
     /// @notice View function to see pending SUSHI on frontend.
@@ -412,60 +386,6 @@ contract AngelBase is BoringOwnable, BoringBatchable {
         ////////////////////////// New
         // emit Harvest(msg.sender, pid, _pendingSushi);
         emit Harvest(from, pid, _pendingSushi);
-    }
-
-    /// @notice Withdraw LP tokens from MCV2 and harvest proceeds for transaction sender to `to`.
-    /// @param pid The index of the pool. See `poolInfo`.
-    /// @param amount LP token amount to withdraw.
-    /// @param to Receiver of the LP tokens and SUSHI rewards.
-    function withdrawAndHarvest(
-        uint256 pid,
-        uint256 amount,
-        address to
-    ) public onlyFountain(pid) {
-        PoolInfo memory pool = updatePool(pid);
-        ////////////////////////// New
-        // Delegate by fountain
-        // UserInfo storage user = userInfo[pid][msg.sender];
-        UserInfo storage user = userInfo[pid][to];
-        int256 accumulatedSushi =
-            int256(
-                user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION
-            );
-        uint256 _pendingSushi =
-            accumulatedSushi.sub(user.rewardDebt).toUInt256();
-
-        // Effects
-        user.rewardDebt = accumulatedSushi.sub(
-            int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION)
-        );
-        user.amount = user.amount.sub(amount);
-
-        // Interactions
-        SUSHI.safeTransfer(to, _pendingSushi);
-
-        IRewarder _rewarder = rewarder[pid];
-        if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(
-                pid,
-                ////////////////////////// New
-                // Delegate by fountain
-                // msg.sender,
-                to,
-                to,
-                _pendingSushi,
-                user.amount
-            );
-        }
-
-        ////////////////////////// New
-        // Handle in fountain
-        // lpToken[pid].safeTransfer(to, amount);
-
-        // emit Withdraw(msg.sender, pid, amount, to);
-        // emit Harvest(msg.sender, pid, _pendingSushi);
-        emit Withdraw(to, pid, amount, to);
-        emit Harvest(to, pid, _pendingSushi);
     }
 
     /// @notice Withdraw without caring about rewards. EMERGENCY ONLY.

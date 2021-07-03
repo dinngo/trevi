@@ -353,13 +353,6 @@ contract('Angel', function([_, user, rewarder]) {
       );
     });
 
-    it('Withdraw and harvest', async function() {
-      await expectRevert(
-        this.angel.withdrawAndHarvest(new BN('0'), ether('1'), user),
-        'not called by correct fountain'
-      );
-    });
-
     it('Emergency Withdraw', async function() {
       await expectRevert(
         this.angel.emergencyWithdraw(new BN('0'), user),
