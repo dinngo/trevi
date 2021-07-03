@@ -24,6 +24,7 @@ const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 const ERC20 = artifacts.require('ERC20');
 const RewarderMock = artifacts.require('RewarderMock');
+const FlashBorrower = artifacts.require('FlashBorrower');
 
 contract('Angel', function([_, user, rewarder]) {
   beforeEach(async function() {
@@ -233,6 +234,89 @@ contract('Angel', function([_, user, rewarder]) {
         accSushiPerShare: (await this.angel.poolInfo.call(new BN('0')))
           .accSushiPerShare,
       });
+    });
+  });
+
+  describe('flashLoan', function() {
+    beforeEach(async function() {
+      this.borrower = await FlashBorrower.new();
+    });
+
+    it('normal', async function() {
+      const fee = ether('1');
+      const multiplier = new BN('100');
+      const collector = this.archangel.address;
+      await this.rwdToken.transfer(user, fee, { from: rewarder });
+      await this.rwdToken.approve(this.borrower.address, fee, { from: user });
+      const tokenUserBefore = await this.rwdToken.balanceOf.call(user);
+      const tokenLenderBefore = await this.rwdToken.balanceOf.call(
+        this.angel.address
+      );
+      const tokenCollectorBefore = await this.rwdToken.balanceOf.call(
+        collector
+      );
+      await this.borrower.go(
+        this.angel.address,
+        this.rwdToken.address,
+        fee,
+        multiplier,
+        {
+          from: user,
+        }
+      );
+      const tokenUserAfter = await this.rwdToken.balanceOf.call(user);
+      const tokenLenderAfter = await this.rwdToken.balanceOf.call(
+        this.angel.address
+      );
+      const tokenCollectorAfter = await this.rwdToken.balanceOf.call(collector);
+      expect(tokenUserAfter.sub(tokenUserBefore)).to.be.bignumber.eq(
+        ether('0').sub(fee)
+      );
+      expect(tokenLenderAfter.sub(tokenLenderBefore)).to.be.bignumber.eq(
+        ether('0')
+      );
+      expect(tokenCollectorAfter.sub(tokenCollectorBefore)).to.be.bignumber.eq(
+        fee
+      );
+    });
+
+    it('different token', async function() {
+      const fee = ether('1');
+      const multiplier = new BN('100');
+      const collector = this.archangel.address;
+      const token = await SimpleToken.new('Token', 'TKN', ether('10000'));
+      await token.transfer(user, fee);
+      await token.approve(this.borrower.address, fee, {
+        from: user,
+      });
+      await expectRevert(
+        this.borrower.go(this.angel.address, token.address, fee, multiplier, {
+          from: user,
+        }),
+        'wrong token'
+      );
+    });
+
+    it('insufficient fee', async function() {
+      const fee = ether('1');
+      const multiplier = new BN('1000');
+      const collector = this.archangel.address;
+      await this.rwdToken.transfer(user, fee, { from: rewarder });
+      await this.rwdToken.approve(this.borrower.address, fee, {
+        from: user,
+      });
+      await expectRevert(
+        this.borrower.go(
+          this.angel.address,
+          this.rwdToken.address,
+          fee,
+          multiplier,
+          {
+            from: user,
+          }
+        ),
+        'transfer amount exceeds balance'
+      );
     });
   });
 

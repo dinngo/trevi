@@ -6,18 +6,23 @@ pragma experimental ABIEncoderV2;
 import "./libraries/ReentrancyGuard.sol";
 import "./libraries/SafeERC20.sol";
 import "./libraries/SafeMath.sol";
+import "./interfaces/IArchangel.sol";
 import "./interfaces/IAngel.sol";
 import "./interfaces/IFountain.sol";
+import "./interfaces/IFountainFactory.sol";
 import "./FountainToken.sol";
 
 // TODO: delegate executions
 /// @title Staking vault of lpTokens
-contract FountainBase is FountainToken, ReentrancyGuard {
+abstract contract FountainBase is FountainToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     /// @notice The staking token of this Fountain
     IERC20 public immutable stakingToken;
+
+    IFountainFactory public immutable factory;
+    IArchangel public immutable archangel;
 
     /// @notice The information of angel that is cached in Fountain
     struct AngelInfo {
@@ -43,12 +48,11 @@ contract FountainBase is FountainToken, ReentrancyGuard {
     );
     event Harvest(address indexed user);
 
-    constructor(
-        IERC20 token,
-        string memory name_,
-        string memory symbol_
-    ) public FountainToken(name_, symbol_) {
+    constructor(IERC20 token) public {
         stakingToken = token;
+        IFountainFactory f = IFountainFactory(msg.sender);
+        factory = f;
+        archangel = IArchangel(f.archangel());
     }
 
     // Getters
