@@ -12,7 +12,6 @@ import "./interfaces/IFountain.sol";
 import "./interfaces/IFountainFactory.sol";
 import "./FountainToken.sol";
 
-// TODO: delegate executions
 /// @title Staking vault of lpTokens
 abstract contract FountainBase is FountainToken, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -122,7 +121,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
 
     /// @notice User may harvest from any angel.
     function harvest(IAngel angel) external {
-        // TODO: Should verify is the angel is valid
         _harvestAngel(angel, _msgSender(), _msgSender());
         emit Harvest(_msgSender());
     }

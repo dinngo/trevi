@@ -108,7 +108,6 @@ contract AngelBase is BoringOwnable, BoringBatchable {
     );
     event LogSushiPerSecond(uint256 sushiPerSecond);
 
-    // TODO: Add onlyFountain verification
     modifier onlyFountain(uint256 pid) {
         require(
             msg.sender == archangel.getFountain(address(lpToken[pid])),
