@@ -111,6 +111,9 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard {
     /// Fountain will call angel's withdraw to update user information, but the tokens
     /// will be transferred from Fountain.
     function withdraw(uint256 amount) external {
+        // Withdraw entire balance if amount == UINT256_MAX
+        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+
         // Burn token
         _burn(_msgSender(), amount);
 
