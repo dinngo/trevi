@@ -109,7 +109,11 @@ contract Angel is BoringOwnable, BoringBatchable {
     event LogSushiPerSecond(uint256 sushiPerSecond);
 
     // TODO: Add onlyFountain verification
-    modifier onlyFountain() {
+    modifier onlyFountain(uint256 pid) {
+        require(
+            msg.sender == archangel.getFountain(address(lpToken[pid])),
+            "Angel: not called by correct fountain"
+        );
         _;
     }
 
@@ -302,7 +306,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFountain {
+    ) public onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][to];
 
@@ -334,7 +338,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFountain {
+    ) public onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
@@ -371,7 +375,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         address from,
         address to
-    ) public onlyFountain {
+    ) public onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
@@ -419,7 +423,7 @@ contract Angel is BoringOwnable, BoringBatchable {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFountain {
+    ) public onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
@@ -468,7 +472,10 @@ contract Angel is BoringOwnable, BoringBatchable {
     /// @notice Withdraw without caring about rewards. EMERGENCY ONLY.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of the LP tokens.
-    function emergencyWithdraw(uint256 pid, address to) public onlyFountain {
+    function emergencyWithdraw(uint256 pid, address to)
+        public
+        onlyFountain(pid)
+    {
         ////////////////////////// New
         // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];

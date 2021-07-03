@@ -235,4 +235,52 @@ contract('Angel', function([_, user, rewarder]) {
       });
     });
   });
+
+  describe('Fridge only functions', function() {
+    beforeEach(async function() {
+      await this.angel.add(
+        new BN('10'),
+        this.stkToken.address,
+        this.rewarder.address,
+        {
+          from: rewarder,
+        }
+      );
+    });
+
+    it('Deposit', async function() {
+      await expectRevert(
+        this.angel.deposit(new BN('0'), ether('1'), user),
+        'not called by correct fountain'
+      );
+    });
+
+    it('Withdraw', async function() {
+      await expectRevert(
+        this.angel.withdraw(new BN('0'), ether('1'), user),
+        'not called by correct fountain'
+      );
+    });
+
+    it('Harvest', async function() {
+      await expectRevert(
+        this.angel.harvest(new BN('0'), user, user),
+        'not called by correct fountain'
+      );
+    });
+
+    it('Withdraw and harvest', async function() {
+      await expectRevert(
+        this.angel.withdrawAndHarvest(new BN('0'), ether('1'), user),
+        'not called by correct fountain'
+      );
+    });
+
+    it('Emergency Withdraw', async function() {
+      await expectRevert(
+        this.angel.emergencyWithdraw(new BN('0'), user),
+        'not called by correct fountain'
+      );
+    });
+  });
 });
