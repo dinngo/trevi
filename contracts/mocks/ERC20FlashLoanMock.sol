@@ -7,7 +7,11 @@ import "../ERC20FlashLoan.sol";
 contract ERC20FlashLoanMock is ERC20FlashLoan {
     address public collector;
 
-    constructor(IERC20 token, bool setCollector) public ERC20FlashLoan(token) {
+    constructor(
+        IERC20 token,
+        uint256 flashLoanFee,
+        bool setCollector
+    ) public ERC20FlashLoan(token, flashLoanFee) {
         if (setCollector) {
             collector = msg.sender;
         } else {
@@ -17,15 +21,5 @@ contract ERC20FlashLoanMock is ERC20FlashLoan {
 
     function feeCollector() public view override returns (address) {
         return collector;
-    }
-
-    function flashFee(address token, uint256 amount)
-        public
-        view
-        override
-        returns (uint256)
-    {
-        require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
-        return (amount / 100);
     }
 }

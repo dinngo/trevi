@@ -31,7 +31,7 @@ contract AngelFactory {
     /// @notice Create the angel of given token as reward. Multiple angels for the
     /// same token is possible.
     function create(IERC20 reward) external returns (Angel) {
-        Angel newAngel = new Angel(reward);
+        Angel newAngel = new Angel(reward, archangel.defaultFlashLoanFee());
         newAngel.transferOwnership(msg.sender, true, false);
         _rewards[newAngel] = reward;
 

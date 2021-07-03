@@ -62,30 +62,30 @@ contract('Archangel', function([_, user, owner]) {
     });
 
     it('from owner', async function() {
-      const feeRate = new BN('50');
-      await this.archangel.setFee(this.fountain.address, feeRate, {
+      const fee = new BN('50');
+      await this.archangel.setFlashLoanFee(this.fountain.address, fee, {
         from: owner,
       });
-      await this.archangel.setFee(this.angel.address, feeRate, { from: owner });
-      expect(await this.fountain.feeRate.call()).to.be.bignumber.eq(feeRate);
-      expect(await this.angel.feeRate.call()).to.be.bignumber.eq(feeRate);
+      await this.archangel.setFlashLoanFee(this.angel.address, fee, { from: owner });
+      expect(await this.fountain.flashLoanFee.call()).to.be.bignumber.eq(fee);
+      expect(await this.angel.flashLoanFee.call()).to.be.bignumber.eq(fee);
     });
 
     it('not from owner', async function() {
-      const feeRate = new BN('50');
+      const fee = new BN('50');
       await expectRevert(
-        this.archangel.setFee(this.fountain.address, feeRate),
+        this.archangel.setFlashLoanFee(this.fountain.address, fee),
         'caller is not the owner'
       );
     });
 
-    it('rate exceeded', async function() {
-      const feeRate = new BN('50000');
+    it('fee exceeded', async function() {
+      const fee = new BN('50000');
       await expectRevert(
-        this.archangel.setFee(this.fountain.address, feeRate, {
+        this.archangel.setFlashLoanFee(this.fountain.address, fee, {
           from: owner,
         }),
-        'rate exceeded'
+        'fee exceeded'
       );
     });
   });

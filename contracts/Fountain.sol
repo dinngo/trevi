@@ -18,12 +18,13 @@ contract Fountain is FountainPermit, ERC20FlashLoan {
     constructor(
         IERC20 token,
         string memory name_,
-        string memory symbol_
+        string memory symbol_,
+        uint256 flashLoanFee
     )
         public
         FountainToken(name_, symbol_)
         FountainBase(token)
-        ERC20FlashLoan(token)
+        ERC20FlashLoan(token, flashLoanFee)
     {}
 
     function rescueERC20(IERC20 token, address to)
@@ -40,7 +41,7 @@ contract Fountain is FountainPermit, ERC20FlashLoan {
         token.safeTransfer(to, amount);
     }
 
-    function setFee(uint256 rate) public override onlyArchangel {
-        super.setFee(rate);
+    function setFlashLoanFee(uint256 fee) public override onlyArchangel {
+        super.setFlashLoanFee(fee);
     }
 }
