@@ -17,7 +17,7 @@ import "./FountainBase.sol";
 abstract contract FountainPermit is FountainBase {
     using Counters for Counters.Counter;
 
-    mapping(address => mapping(address => uint256)) private _allowances;
+    mapping(address => mapping(address => uint256)) private _timeLimits;
     mapping(address => Counters.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
@@ -38,7 +38,7 @@ abstract contract FountainPermit is FountainBase {
 
     modifier canHarvestFrom(address owner) {
         require(
-            block.timestamp <= _allowances[owner][_msgSender()],
+            block.timestamp <= _timeLimits[owner][_msgSender()],
             "Fountain: harvest not allowed"
         );
         _;
@@ -49,7 +49,7 @@ abstract contract FountainPermit is FountainBase {
         view
         returns (uint256)
     {
-        return _allowances[owner][sender];
+        return _timeLimits[owner][sender];
     }
 
     /**
@@ -174,7 +174,7 @@ abstract contract FountainPermit is FountainBase {
         require(owner != address(0), "Fountain: approve from the zero address");
         require(sender != address(0), "Fountain: approve to the zero address");
 
-        _allowances[owner][sender] = timeLimit;
+        _timeLimits[owner][sender] = timeLimit;
         emit HarvestApproval(owner, sender, timeLimit);
     }
 }
