@@ -39,6 +39,8 @@ contract Fountain is FountainPermit, ERC20FlashLoan {
             amount = token.balanceOf(address(this));
         }
         token.safeTransfer(to, amount);
+
+        return amount;
     }
 
     function setFlashLoanFee(uint256 fee) public override onlyArchangel {

@@ -31,11 +31,9 @@ contract Archangel is Ownable {
         onlyOwner
         returns (uint256)
     {
-        try from.rescueERC20(token, _msgSender()) returns (uint256 amount) {
-            return amount;
-        } catch Error(string memory reason) {
-            revert(reason);
-        } catch {
+        if (fountainFactory.isValid(from)) {
+            return from.rescueERC20(token, _msgSender());
+        } else {
             uint256 amount = token.balanceOf(address(this));
             token.safeTransfer(_msgSender(), amount);
             return amount;
