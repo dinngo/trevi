@@ -5,9 +5,10 @@ pragma experimental ABIEncoderV2;
 
 import "./Angel.sol";
 import "./interfaces/IAngelFactory.sol";
+import "./utils/ErrorMsg.sol";
 
 /// @title The factory of angel.
-contract AngelFactory {
+contract AngelFactory is ErrorMsg {
     using BoringERC20 for IERC20;
     using BoringMath for uint256;
 
@@ -21,6 +22,11 @@ contract AngelFactory {
     }
 
     // Getters
+    /// @notice Return contract name for error message.
+    function getContractName() public pure override returns (string memory) {
+        return "AngelFactory";
+    }
+
     /// @notice Check if angel is valid.
     /// @param angel The angel to be verified.
     /// @return Is valid or not.
@@ -38,6 +44,11 @@ contract AngelFactory {
     /// @notice Create the angel of given token as reward. Multiple angels for the
     /// same token is possible.
     function create(IERC20 reward) external returns (Angel) {
+        _requireMsg(
+            address(reward) != address(0),
+            "create",
+            "reward is zero address"
+        );
         Angel newAngel = new Angel(reward, archangel.defaultFlashLoanFee());
         newAngel.transferOwnership(msg.sender, true, false);
         _rewards[newAngel] = reward;
