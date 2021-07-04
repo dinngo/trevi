@@ -21,19 +21,28 @@ contract FountainFactory is ErrorMsg {
     }
 
     // Getters
+    /// @notice Return contract name for error message.
     function getContractName() public pure override returns (string memory) {
         return "FountainFactory";
     }
 
+    /// @notice Check if fountain is valid.
+    /// @param fountain The fountain to be verified.
+    /// @return Is valid or not.
     function isValid(Fountain fountain) external view returns (bool) {
         return (address(_stakings[fountain]) != address(0));
     }
 
+    /// @notice Get the fountain of given token.
+    /// @param token The token address.
+    /// @return The fountain.
     function fountainOf(IERC20 token) external view returns (Fountain) {
         return _fountains[token];
     }
 
     /// @notice Create Fountain for token.
+    /// @param token The token address to be created.
+    /// @return The created fountain.
     function create(ERC20 token) external returns (Fountain) {
         _requireMsg(
             address(_fountains[token]) == address(0),
@@ -42,12 +51,8 @@ contract FountainFactory is ErrorMsg {
         );
         string memory name = _concat("Fountain ", token.name());
         string memory symbol = _concat("FTN-", token.symbol());
-        Fountain fountain = new Fountain(
-            token,
-            name,
-            symbol,
-            archangel.defaultFlashLoanFee()
-        );
+        Fountain fountain =
+            new Fountain(token, name, symbol, archangel.defaultFlashLoanFee());
         _fountains[token] = fountain;
         _stakings[fountain] = token;
 
