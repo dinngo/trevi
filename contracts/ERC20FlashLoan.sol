@@ -17,6 +17,7 @@ contract ERC20FlashLoan is IFlashLender {
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(IERC20 token, uint256 fee) public {
+        require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
         lendingToken = token;
         flashLoanFee = fee;
     }
@@ -75,10 +76,8 @@ contract ERC20FlashLoan is IFlashLender {
                 _RETURN_VALUE,
             "ERC20FlashLoan: invalid return value"
         );
-        uint256 currentAllowance = lendingToken.allowance(
-            address(receiver),
-            address(this)
-        );
+        uint256 currentAllowance =
+            lendingToken.allowance(address(receiver), address(this));
         uint256 totalDebt = amount.add(fee);
         require(
             currentAllowance >= totalDebt,
@@ -96,7 +95,13 @@ contract ERC20FlashLoan is IFlashLender {
         return true;
     }
 
-    function flashLoanFeeCollector() public view virtual override returns (address) {
+    function flashLoanFeeCollector()
+        public
+        view
+        virtual
+        override
+        returns (address)
+    {
         this;
         return address(0);
     }

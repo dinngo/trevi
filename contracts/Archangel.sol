@@ -8,14 +8,16 @@ import "./AngelFactory.sol";
 import "./FountainFactory.sol";
 import "./libraries/Ownable.sol";
 import "./libraries/SafeERC20.sol";
+import "./utils/ErrorMsg.sol";
 
 /// @title Staking system manager
-contract Archangel is Ownable {
+contract Archangel is Ownable, ErrorMsg {
     using SafeERC20 for IERC20;
 
     AngelFactory public immutable angelFactory;
     FountainFactory public immutable fountainFactory;
     uint256 public defaultFlashLoanFee = 100;
+    uint256 public constant FEE_BASE = 1e4;
 
     constructor() public {
         angelFactory = new AngelFactory();
@@ -23,6 +25,11 @@ contract Archangel is Ownable {
     }
 
     // Getters
+    /// @notice Return contract name for error message.
+    function getContractName() public pure override returns (string memory) {
+        return "Archangel";
+    }
+
     /// @notice Get the fountain for given token.
     /// @param token The token to be queried.
     /// @return Fountain address.
@@ -54,6 +61,11 @@ contract Archangel is Ownable {
     /// only be set by owner.
 
     function setDefaultFlashLoanFee(uint256 fee) external onlyOwner {
+        _requireMsg(
+            fee <= FEE_BASE,
+            "setDefaultFlashLoanFee",
+            "fee rate exceeded"
+        );
         defaultFlashLoanFee = fee;
     }
 

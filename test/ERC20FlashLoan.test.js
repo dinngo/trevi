@@ -23,12 +23,22 @@ const FlashBorrower = artifacts.require('FlashBorrower');
 contract('ERC20FlashLoan', function([_, collector, user]) {
   beforeEach(async function() {
     this.token = await SimpleToken.new('Token', 'TKN', ether('10000'));
-    this.lender = await ERC20FlashLoan.new(this.token.address, new BN('100'), true, {
-      from: collector,
-    });
-    this.lenderNoC = await ERC20FlashLoan.new(this.token.address, new BN('100'), false, {
-      from: collector,
-    });
+    this.lender = await ERC20FlashLoan.new(
+      this.token.address,
+      new BN('100'),
+      true,
+      {
+        from: collector,
+      }
+    );
+    this.lenderNoC = await ERC20FlashLoan.new(
+      this.token.address,
+      new BN('100'),
+      false,
+      {
+        from: collector,
+      }
+    );
     this.borrower = await FlashBorrower.new();
     await this.token.transfer(this.lender.address, ether('1000'));
     await this.token.transfer(this.lenderNoC.address, ether('1000'));

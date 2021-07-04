@@ -49,6 +49,71 @@ contract('Archangel', function([_, user, owner]) {
     });
   });
 
+  describe('Set default fee', function() {
+    let oldRate;
+    const newRate = new BN('200');
+    beforeEach(async function() {
+      oldRate = await this.archangel.defaultFlashLoanFee.call();
+    });
+
+    it('normal', async function() {
+      const oldAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      await this.archangel.setDefaultFlashLoanFee(newRate, { from: owner });
+      const newAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      expect(
+        await this.archangel.defaultFlashLoanFee.call()
+      ).to.be.bignumber.eq(newRate);
+      expect(await oldAngel.flashLoanFee.call()).to.be.bignumber.eq(oldRate);
+      expect(await newAngel.flashLoanFee.call()).to.be.bignumber.eq(newRate);
+    });
+
+    it('from not owner', async function() {
+      const oldAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      await expectRevert(
+        this.archangel.setDefaultFlashLoanFee(newRate),
+        'caller is not the owner'
+      );
+      const newAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      expect(
+        await this.archangel.defaultFlashLoanFee.call()
+      ).to.be.bignumber.eq(oldRate);
+      expect(await oldAngel.flashLoanFee.call()).to.be.bignumber.eq(oldRate);
+      expect(await newAngel.flashLoanFee.call()).to.be.bignumber.eq(oldRate);
+    });
+
+    it('rate too high', async function() {
+      const oldAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      await expectRevert(
+        this.archangel.setDefaultFlashLoanFee(new BN('10001'), { from: owner }),
+        'fee rate exceeded'
+      );
+      const newAngel = await getCreated(
+        await this.angelFactory.create(this.token2.address),
+        Angel
+      );
+      expect(
+        await this.archangel.defaultFlashLoanFee.call()
+      ).to.be.bignumber.eq(oldRate);
+      expect(await oldAngel.flashLoanFee.call()).to.be.bignumber.eq(oldRate);
+      expect(await newAngel.flashLoanFee.call()).to.be.bignumber.eq(oldRate);
+    });
+  });
+
   describe('Set fee', function() {
     beforeEach(async function() {
       this.fountain = await getCreated(
@@ -66,7 +131,9 @@ contract('Archangel', function([_, user, owner]) {
       await this.archangel.setFlashLoanFee(this.fountain.address, fee, {
         from: owner,
       });
-      await this.archangel.setFlashLoanFee(this.angel.address, fee, { from: owner });
+      await this.archangel.setFlashLoanFee(this.angel.address, fee, {
+        from: owner,
+      });
       expect(await this.fountain.flashLoanFee.call()).to.be.bignumber.eq(fee);
       expect(await this.angel.flashLoanFee.call()).to.be.bignumber.eq(fee);
     });
