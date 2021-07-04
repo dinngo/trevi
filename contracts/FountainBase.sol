@@ -141,6 +141,23 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         emit Withdraw(_msgSender(), amount, _msgSender());
     }
 
+    /// @notice User may withdraw their lp token. FTN token will be burned.
+    /// Fountain will call angel's withdraw to update user information, but the tokens
+    /// will be transferred from Fountain.
+    /// @param amount The amount to be withdrawn.
+    /// @param to The address to sent the withdrawn balance to.
+    function withdrawTo(uint256 amount, address to) external {
+        // Withdraw entire balance if amount == UINT256_MAX
+        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+
+        // Burn token
+        _burn(_msgSender(), amount);
+
+        // Transfer user staking token
+        stakingToken.safeTransfer(to, amount);
+        emit Withdraw(_msgSender(), amount, _msgSender());
+    }
+
     /// @notice User may harvest from any angel.
     /// @param angel The angel to be harvest from.
     function harvest(IAngel angel) external {

@@ -423,6 +423,30 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         );
       });
 
+      it('to others', async function() {
+        // check joined angel user balance
+        const info1Before = await this.angel1.userInfo.call(pid, user);
+        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        // user withdraw
+        const receipt = await this.fountain.withdrawTo(depositAmount, someone, {
+          from: user,
+        });
+        expectEvent(receipt, 'Withdraw', [user, depositAmount, user]);
+        // check joined angel user balance
+        const info1 = await this.angel1.userInfo.call(pid, user);
+        const pending = await this.angel1.pendingSushi.call(pid, user);
+        // check user staking token and reward token amount
+        expect(info1[0]).to.be.bignumber.eq(ether('0'));
+        expect(ether('0').sub(info1[1])).to.be.bignumber.gte(pendingBefore);
+        expect(pending).to.be.bignumber.gte(pendingBefore);
+        expect(await this.rwdToken1.balanceOf.call(user)).to.be.bignumber.eq(
+          ether('0')
+        );
+        expect(await this.stkToken.balanceOf.call(someone)).to.be.bignumber.eq(
+          depositAmount
+        );
+      });
+
       it('max', async function() {
         // check joined angel user balance
         const info1Before = await this.angel1.userInfo.call(pid, user);
