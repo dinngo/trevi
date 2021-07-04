@@ -20,10 +20,17 @@ contract AngelFactory {
         archangel = IArchangel(msg.sender);
     }
 
+    // Getters
+    /// @notice Check if angel is valid.
+    /// @param angel The angel to be verified.
+    /// @return Is valid or not.
     function isValid(Angel angel) external view returns (bool) {
         return (address(_rewards[angel]) != address(0));
     }
 
+    /// @notice Get the reward token of angel.
+    /// @param angel The angel address.
+    /// @return The reward token address.
     function rewardOf(Angel angel) external view returns (IERC20) {
         return _rewards[angel];
     }
