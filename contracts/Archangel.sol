@@ -22,10 +22,19 @@ contract Archangel is Ownable {
         fountainFactory = new FountainFactory();
     }
 
+    // Getters
+    /// @notice Get the fountain for given token.
+    /// @param token The token to be queried.
+    /// @return Fountain address.
     function getFountain(IERC20 token) external view returns (Fountain) {
         return fountainFactory.fountainOf(token);
     }
 
+    /// @notice Fetch the token from fountain or archangel itself. Can
+    /// only be called from owner.
+    /// @param token The token to be fetched.
+    /// @param from The fountain to be fetched.
+    /// @return The token amount being fetched.
     function rescueERC20(IERC20 token, Fountain from)
         external
         onlyOwner
@@ -40,10 +49,18 @@ contract Archangel is Ownable {
         }
     }
 
+    /// @notice Set the default fee rate for flash loan. The default fee
+    /// rate will be applied when fountain or angel is being created. Can
+    /// only be set by owner.
+
     function setDefaultFlashLoanFee(uint256 fee) external onlyOwner {
         defaultFlashLoanFee = fee;
     }
 
+    /// @notice Set the flash loan fee rate of angel or fountain. Can only
+    /// be set by owner.
+    /// @param lender The address of angel of fountain.
+    /// @param fee The fee rate to be applied.
     function setFlashLoanFee(address lender, uint256 fee) external onlyOwner {
         IFlashLender(lender).setFlashLoanFee(fee);
     }
