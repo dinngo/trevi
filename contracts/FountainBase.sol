@@ -38,7 +38,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
 
     event Joined(address user, address angel);
     event Quitted(address user, address angel);
-
     event Deposit(address indexed user, uint256 amount, address indexed to);
     event Withdraw(address indexed user, uint256 amount, address indexed to);
     event EmergencyWithdraw(
@@ -56,23 +55,33 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     }
 
     // Getters
+    /// @notice Return contract name for error message.
     function getContractName() public pure override returns (string memory) {
         return "Fountain";
     }
 
+    /// @notice Return the angels that user joined.
+    /// @param user The user address.
+    /// @return The angel list.
     function joinedAngel(address user) public view returns (IAngel[] memory) {
         return _joinedAngels[user];
     }
 
+    /// @notice Return the information of the angel. The fountain needs to be
+    /// added by angel.
+    /// @param angel The angel to be queried.
+    /// @return The pid in angel.
+    /// @return The total balance deposited in angel.
     function angelInfo(IAngel angel) public view returns (uint256, uint256) {
         AngelInfo storage info = _angelInfos[angel];
         _requireMsg(info.isSet, "angelInfo", "Fountain: angel not set");
         return (info.pid, info.totalBalance);
     }
 
-    // Angel action
+    /// Angel action
     /// @notice Angel may set their own pid that matches the staking token
     /// of the Fountain.
+    /// @param pid The pid to be assigned.
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(_msgSender());
         AngelInfo storage info = _angelInfos[angel];
@@ -90,6 +99,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice User may deposit their lp token. FTN token will be minted.
     /// Fountain will call angel's deposit to update user information, but the tokens
     /// stay in Fountain.
+    /// @param amount The amount to be deposited.
     function deposit(uint256 amount) external {
         // Mint token
         _mint(_msgSender(), amount);
@@ -104,6 +114,8 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice User may deposit their lp token for others. FTN token will be minted.
     /// Fountain will call angel's deposit to update user information, but the tokens
     /// stay in Fountain.
+    /// @param amount The amount to be deposited.
+    /// @param to The address to be deposited.
     function depositTo(uint256 amount, address to) external {
         // Mint token
         _mint(to, amount);
@@ -116,6 +128,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice User may withdraw their lp token. FTN token will be burned.
     /// Fountain will call angel's withdraw to update user information, but the tokens
     /// will be transferred from Fountain.
+    /// @param amount The amount to be withdrawn.
     function withdraw(uint256 amount) external {
         // Withdraw entire balance if amount == UINT256_MAX
         amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
@@ -129,6 +142,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     }
 
     /// @notice User may harvest from any angel.
+    /// @param angel The angel to be harvest from.
     function harvest(IAngel angel) external {
         _harvestAngel(angel, _msgSender(), _msgSender());
         emit Harvest(_msgSender());
@@ -158,11 +172,13 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     }
 
     /// @notice Join the given angel's program.
+    /// @param angel The angel to be joined.
     function joinAngel(IAngel angel) external {
         _joinAngel(angel);
     }
 
-    /// @notice Join the given angel's program.
+    /// @notice Join the given angels' program.
+    /// @param angels The angels to be joined.
     function joinAngels(IAngel[] calldata angels) external {
         for (uint256 i = 0; i < angels.length; i++) {
             _joinAngel(angels[i]);
@@ -170,6 +186,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     }
 
     /// @notice Quit the given angel's program.
+    /// @param angel The angel to be quited.
     function quitAngel(IAngel angel) external {
         IAngel[] storage angels = _joinedAngels[_msgSender()];
         uint256 len = angels.length;
@@ -196,7 +213,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
     }
 
-    /// @notice Quit the given angel's program.
+    /// @notice Quit all angels' program.
     function quitAllAngel() external {
         IAngel[] storage angels = _joinedAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {

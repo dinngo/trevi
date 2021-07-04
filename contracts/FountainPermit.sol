@@ -4,6 +4,7 @@ pragma solidity 0.6.12;
 
 import "./FountainBase.sol";
 
+/// @title Staking vault of lpTokens
 abstract contract FountainPermit is FountainBase {
     using Counters for Counters.Counter;
 
@@ -26,6 +27,7 @@ abstract contract FountainPermit is FountainBase {
         uint256 timeLimit
     );
 
+    /// @notice Examine if the time limit is not expired.
     modifier canHarvestFrom(address owner) {
         _requireMsg(
             block.timestamp <= _timeLimits[owner][_msgSender()],
@@ -35,6 +37,11 @@ abstract contract FountainPermit is FountainBase {
         _;
     }
 
+    // Getter
+    /// @notice Return the time limit owner approved to the sender.
+    /// @param owner The owner address.
+    /// @param sender The sender address.
+    /// @return The time limit.
     function harvestTimeLimit(address owner, address sender)
         public
         view
@@ -43,11 +50,9 @@ abstract contract FountainPermit is FountainBase {
         return _timeLimits[owner][sender];
     }
 
-    /**
-     * Requirements:
-     *
-     * - `sender` cannot be the zero address.
-     */
+    /// @notice Approve sender to harvest before timeLimit.
+    /// @param sender The sender address.
+    /// @param timeLimit The time limit to be approved.
     function harvestApprove(address sender, uint256 timeLimit)
         public
         returns (bool)
@@ -56,6 +61,14 @@ abstract contract FountainPermit is FountainBase {
         return true;
     }
 
+    /// @notice Approve sender to harvest for owner before timeLimit.
+    /// @param owner The owner address.
+    /// @param sender The sender address.
+    /// @param timeLimit The time limit to be approved.
+    /// @param deadline The permit available deadline.
+    /// @param v Signature v.
+    /// @param r Signature r.
+    /// @param s Signature s.
     function harvestPermit(
         address owner,
         address sender,
@@ -97,7 +110,10 @@ abstract contract FountainPermit is FountainBase {
         return _nonces[owner].current();
     }
 
-    /// @notice User may harvest from any angel for permitted user
+    /// @notice User may harvest from any angel for permitted user.
+    /// @param angel The angel address.
+    /// @param from The owner address.
+    /// @param to The recipient address.
     function harvestFrom(
         IAngel angel,
         address from,
@@ -107,7 +123,9 @@ abstract contract FountainPermit is FountainBase {
         emit Harvest(from);
     }
 
-    /// @notice User may harvest from all the joined angels of permitted user
+    /// @notice User may harvest from all the joined angels for permitted user.
+    /// @param from The owner address.
+    /// @param to The recipient address.
     function harvestAllFrom(address from, address to)
         public
         canHarvestFrom(from)
@@ -120,6 +138,15 @@ abstract contract FountainPermit is FountainBase {
         emit Harvest(from);
     }
 
+    /// @notice Perform harvestFrom after permit.
+    /// @param angel The angel address.
+    /// @param from The owner address.
+    /// @param to The recipient address.
+    /// @param timeLimit The time limit to be approved.
+    /// @param deadline The permit available deadline.
+    /// @param v Signature v.
+    /// @param r Signature r.
+    /// @param s Signature s.
     function harvestFromWithPermit(
         IAngel angel,
         address from,
@@ -134,6 +161,14 @@ abstract contract FountainPermit is FountainBase {
         harvestFrom(angel, from, to);
     }
 
+    /// @notice Perform harvestAllFrom after permit.
+    /// @param from The owner address.
+    /// @param to The recipient address.
+    /// @param timeLimit The time limit to be approved.
+    /// @param deadline The permit available deadline.
+    /// @param v Signature v.
+    /// @param r Signature r.
+    /// @param s Signature s.
     function harvestAllFromWithPermit(
         address from,
         address to,
@@ -147,20 +182,6 @@ abstract contract FountainPermit is FountainBase {
         harvestAllFrom(from, to);
     }
 
-    /**
-     * @dev Sets `timeLimit` as the time limit of `sender` over the
-     * `owner` s tokens.
-     *
-     * This internal function is equivalent to `approve`, and can be used to
-     * e.g. set automatic allowances for certain subsystems, etc.
-     *
-     * Emits an {HarvestApproval} event.
-     *
-     * Requirements:
-     *
-     * - `owner` cannot be the zero address.
-     * - `sender` cannot be the zero address.
-     */
     function _harvestApprove(
         address owner,
         address sender,

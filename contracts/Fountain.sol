@@ -5,6 +5,7 @@ pragma solidity 0.6.12;
 import "./FountainPermit.sol";
 import "./ERC20FlashLoan.sol";
 
+/// @title The fountain
 contract Fountain is FountainPermit, ERC20FlashLoan {
     modifier onlyArchangel {
         _requireMsg(
@@ -27,6 +28,12 @@ contract Fountain is FountainPermit, ERC20FlashLoan {
         ERC20FlashLoan(token, flashLoanFee)
     {}
 
+    /// @notice Fetch the token from fountain. Can only be called by Archangel.
+    /// Will only fetch the extra part if the token is the staking token. Otherwise
+    /// the entire balance will be fetched.
+    /// @param token The token address.
+    /// @param to The receiver.
+    /// @return The transferred amount.
     function rescueERC20(IERC20 token, address to)
         external
         onlyArchangel
@@ -43,6 +50,8 @@ contract Fountain is FountainPermit, ERC20FlashLoan {
         return amount;
     }
 
+    /// @notice Set the fee rate for flash loan. can only be set by Archangel.
+    /// @param fee The fee rate.
     function setFlashLoanFee(uint256 fee) public override onlyArchangel {
         super.setFlashLoanFee(fee);
     }
