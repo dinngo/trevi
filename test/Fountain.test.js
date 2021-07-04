@@ -671,7 +671,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             '1'
           );
           expect(
-            await this.fountain.harvestAllowance.call(owner, sender)
+            await this.fountain.harvestTimeLimit.call(owner, sender)
           ).to.be.bignumber.eq(timeLimit);
         });
       });

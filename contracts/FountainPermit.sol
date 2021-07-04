@@ -35,7 +35,7 @@ abstract contract FountainPermit is FountainBase {
         _;
     }
 
-    function harvestAllowance(address owner, address sender)
+    function harvestTimeLimit(address owner, address sender)
         public
         view
         returns (uint256)
