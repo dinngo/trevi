@@ -240,6 +240,7 @@ contract('Angel', function([_, user, rewarder]) {
   describe('flashLoan', function() {
     beforeEach(async function() {
       this.borrower = await FlashBorrower.new();
+      await this.archangel.setFlashLoanFee(this.angel.address, new BN('100'));
     });
 
     it('normal', async function() {

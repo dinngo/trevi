@@ -1019,6 +1019,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         await this.fountain.deposit(depositAmount, { from: user });
+        await this.archangel.setFlashLoanFee(
+          this.fountain.address,
+          new BN('100'),
+          { from: owner }
+        );
       });
 
       it('normal', async function() {
