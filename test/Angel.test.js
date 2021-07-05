@@ -360,4 +360,40 @@ contract('Angel', function([_, user, rewarder]) {
       );
     });
   });
+
+  describe('Rescue token', function() {
+    const amount = ether('0.1');
+    beforeEach(async function() {
+      await this.dummy.transfer(this.angel.address, amount, { from: rewarder });
+      await this.rwdToken.transfer(this.angel.address, amount, {
+        from: rewarder,
+      });
+    });
+
+    it('normal', async function() {
+      const tokenUser = await this.dummy.balanceOf.call(user);
+      await this.angel.rescueERC20(this.dummy.address, user, {
+        from: rewarder,
+      });
+      expect(await this.dummy.balanceOf.call(user)).to.be.bignumber.eq(
+        tokenUser.add(amount)
+      );
+    });
+
+    it('rescue reward', async function() {
+      await expectRevert(
+        this.angel.rescueERC20(this.rwdToken.address, user, {
+          from: rewarder,
+        }),
+        'cannot rescue reward token'
+      );
+    });
+
+    it('from not owner', async function() {
+      await expectRevert(
+        this.angel.rescueERC20(this.dummy.address, user),
+        'caller is not the owner'
+      );
+    });
+  });
 });

@@ -156,7 +156,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
         ////////////////////////// New
         // Update pid in fountain
-        if (address(_lpToken) == address(0)) return;
         IFountain fountain =
             IFountain(archangel.getFountain(address(_lpToken)));
         fountain.setPoolId(pid);
@@ -415,5 +414,26 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         // lpToken[pid].safeTransfer(to, amount);
         // emit EmergencyWithdraw(msg.sender, pid, amount, to);
         emit EmergencyWithdraw(to, pid, amount, to);
+    }
+
+    /// @notice Fetch the token from angel. Can only be called by owner.
+    /// Cannot rescue the reward token.
+    /// @param token The token address.
+    /// @param to The receiver.
+    /// @return The transferred amount.
+    function rescueERC20(IERC20 token, address to)
+        external
+        onlyOwner
+        returns (uint256)
+    {
+        _requireMsg(
+            token != SUSHI,
+            "rescueERC20",
+            "cannot rescue reward token"
+        );
+        uint256 amount = token.balanceOf(address(this));
+        token.safeTransfer(to, amount);
+
+        return amount;
     }
 }
