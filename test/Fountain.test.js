@@ -431,7 +431,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const receipt = await this.fountain.withdrawTo(depositAmount, someone, {
           from: user,
         });
-        expectEvent(receipt, 'Withdraw', [user, depositAmount, user]);
+        expectEvent(receipt, 'Withdraw', [user, depositAmount, someone]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
         const pending = await this.angel1.pendingSushi.call(pid, user);
