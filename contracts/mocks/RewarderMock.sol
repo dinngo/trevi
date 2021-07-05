@@ -25,7 +25,7 @@ contract RewarderMock is IRewarder {
 
     function onSushiReward(
         uint256,
-        address user,
+        address,
         address to,
         uint256 sushiAmount,
         uint256
@@ -41,8 +41,8 @@ contract RewarderMock is IRewarder {
     }
 
     function pendingTokens(
-        uint256 pid,
-        address user,
+        uint256,
+        address,
         uint256 sushiAmount
     )
         external
