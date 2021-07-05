@@ -155,7 +155,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
 
         // Transfer user staking token
         stakingToken.safeTransfer(to, amount);
-        emit Withdraw(_msgSender(), amount, _msgSender());
+        emit Withdraw(_msgSender(), amount, to);
     }
 
     /// @notice User may harvest from any angel.
