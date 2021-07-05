@@ -70,7 +70,7 @@ contract ERC20FlashLoan is IFlashLender {
     ) public override returns (bool) {
         uint256 fee = flashFee(token, amount);
         // send token to receiver
-        lendingToken.transfer(address(receiver), amount);
+        lendingToken.safeTransfer(address(receiver), amount);
         require(
             receiver.onFlashLoan(msg.sender, token, amount, fee, data) ==
                 _RETURN_VALUE,
