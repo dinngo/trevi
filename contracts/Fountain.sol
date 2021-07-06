@@ -1,12 +1,20 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity 0.6.12;
+pragma experimental ABIEncoderV2;
 
-import "./FountainPermit.sol";
+import "./libraries/boringcrypto/BoringBatchable.sol";
+import "./HarvestPermit.sol";
+import "./JoinPermit.sol";
 import "./ERC20FlashLoan.sol";
 
 /// @title The fountain
-contract Fountain is FountainPermit, ERC20FlashLoan {
+contract Fountain is
+    HarvestPermit,
+    JoinPermit,
+    ERC20FlashLoan,
+    BoringBatchable
+{
     modifier onlyArchangel {
         _requireMsg(
             _msgSender() == address(archangel),

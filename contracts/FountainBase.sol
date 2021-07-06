@@ -36,8 +36,8 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @dev The information of angels
     mapping(IAngel => AngelInfo) private _angelInfos;
 
-    event Joined(address user, address angel);
-    event Quitted(address user, address angel);
+    event Join(address user, address angel);
+    event Quit(address user, address angel);
     event Deposit(address indexed user, uint256 amount, address indexed to);
     event Withdraw(address indexed user, uint256 amount, address indexed to);
     event EmergencyWithdraw(
@@ -191,14 +191,14 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice Join the given angel's program.
     /// @param angel The angel to be joined.
     function joinAngel(IAngel angel) external {
-        _joinAngel(angel);
+        _joinAngel(angel, _msgSender());
     }
 
     /// @notice Join the given angels' program.
     /// @param angels The angels to be joined.
     function joinAngels(IAngel[] calldata angels) external {
         for (uint256 i = 0; i < angels.length; i++) {
-            _joinAngel(angels[i]);
+            _joinAngel(angels[i], _msgSender());
         }
     }
 
@@ -224,7 +224,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "Fountain: unjoined angel"
         );
 
-        emit Quitted(_msgSender(), address(angel));
+        emit Quit(_msgSender(), address(angel));
 
         // Update user info at angel
         _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
@@ -235,7 +235,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         IAngel[] storage angels = _joinedAngels[_msgSender()];
         for (uint256 i = 0; i < angels.length; i++) {
             IAngel angel = angels[i];
-            emit Quitted(_msgSender(), address(angel));
+            emit Quit(_msgSender(), address(angel));
             // Update user info at angel
             _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
         }
@@ -276,7 +276,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice The total staked amount should be updated in angelInfo when
     /// token is being deposited/withdrawn.
     function _depositAngel(
-        address account,
+        address user,
         IAngel angel,
         uint256 amount
     ) internal nonReentrant {
@@ -286,12 +286,12 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_depositAngel",
             "Fountain: not added by angel"
         );
-        angel.deposit(info.pid, amount, account);
+        angel.deposit(info.pid, amount, user);
         info.totalBalance = info.totalBalance.add(amount);
     }
 
     function _withdrawAngel(
-        address account,
+        address user,
         IAngel angel,
         uint256 amount
     ) internal nonReentrant {
@@ -301,7 +301,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_withdrawAngel",
             "Fountain: not added by angel"
         );
-        angel.withdraw(info.pid, amount, account);
+        angel.withdraw(info.pid, amount, user);
         info.totalBalance = info.totalBalance.sub(amount);
     }
 
@@ -319,7 +319,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         angel.harvest(info.pid, from, to);
     }
 
-    function _emergencyWithdrawAngel(address account, IAngel angel)
+    function _emergencyWithdrawAngel(address user, IAngel angel)
         internal
         nonReentrant
     {
@@ -329,21 +329,21 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_emergencyAngel",
             "Fountain: not added by angel"
         );
-        uint256 amount = balanceOf(account);
-        angel.emergencyWithdraw(info.pid, account);
+        uint256 amount = balanceOf(user);
+        angel.emergencyWithdraw(info.pid, user);
         info.totalBalance = info.totalBalance.sub(amount);
     }
 
-    function _joinAngel(IAngel angel) internal {
-        IAngel[] storage angels = _joinedAngels[_msgSender()];
+    function _joinAngel(IAngel angel, address user) internal {
+        IAngel[] storage angels = _joinedAngels[user];
         for (uint256 i = 0; i < angels.length; i++) {
             _requireMsg(angels[i] != angel, "_joinAngel", "Angel joined");
         }
         angels.push(angel);
 
-        emit Joined(_msgSender(), address(angel));
+        emit Join(user, address(angel));
 
         // Update user info at angel
-        _depositAngel(_msgSender(), angel, balanceOf(_msgSender()));
+        _depositAngel(user, angel, balanceOf(user));
     }
 }
