@@ -100,7 +100,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// Fountain will call angel's deposit to update user information, but the tokens
     /// stay in Fountain.
     /// @param amount The amount to be deposited.
-    function deposit(uint256 amount) public {
+    function deposit(uint256 amount) external {
         // Mint token
         _mint(_msgSender(), amount);
 
@@ -196,7 +196,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
 
     /// @notice Join the given angels' program.
     /// @param angels The angels to be joined.
-    function joinAngels(IAngel[] memory angels) external {
+    function joinAngels(IAngel[] calldata angels) external {
         for (uint256 i = 0; i < angels.length; i++) {
             _joinAngel(angels[i], _msgSender());
         }

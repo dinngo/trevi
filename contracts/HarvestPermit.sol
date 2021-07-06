@@ -54,7 +54,7 @@ abstract contract HarvestPermit is FountainBase {
     /// @param sender The sender address.
     /// @param timeLimit The time limit to be approved.
     function harvestApprove(address sender, uint256 timeLimit)
-        public
+        external
         returns (bool)
     {
         _harvestApprove(_msgSender(), sender, timeLimit);
@@ -156,7 +156,7 @@ abstract contract HarvestPermit is FountainBase {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public {
+    ) external {
         harvestPermit(from, _msgSender(), timeLimit, deadline, v, r, s);
         harvestFrom(angel, from, to);
     }
@@ -177,7 +177,7 @@ abstract contract HarvestPermit is FountainBase {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public {
+    ) external {
         harvestPermit(from, _msgSender(), timeLimit, deadline, v, r, s);
         harvestAllFrom(from, to);
     }

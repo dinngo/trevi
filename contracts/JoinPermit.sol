@@ -54,7 +54,7 @@ abstract contract JoinPermit is FountainBase {
     /// @param sender The sender address.
     /// @param timeLimit The time limit to be approved.
     function joinApprove(address sender, uint256 timeLimit)
-        public
+        external
         returns (bool)
     {
         _joinApprove(_msgSender(), sender, timeLimit);
