@@ -194,7 +194,7 @@ abstract contract HarvestPermit is FountainBase {
         );
         _requireMsg(
             sender != address(0),
-            "_harvesrApprove",
+            "_harvestApprove",
             "approve to the zero address"
         );
 
