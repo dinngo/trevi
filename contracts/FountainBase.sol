@@ -276,7 +276,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice The total staked amount should be updated in angelInfo when
     /// token is being deposited/withdrawn.
     function _depositAngel(
-        address account,
+        address user,
         IAngel angel,
         uint256 amount
     ) internal nonReentrant {
@@ -286,12 +286,12 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_depositAngel",
             "Fountain: not added by angel"
         );
-        angel.deposit(info.pid, amount, account);
+        angel.deposit(info.pid, amount, user);
         info.totalBalance = info.totalBalance.add(amount);
     }
 
     function _withdrawAngel(
-        address account,
+        address user,
         IAngel angel,
         uint256 amount
     ) internal nonReentrant {
@@ -301,7 +301,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_withdrawAngel",
             "Fountain: not added by angel"
         );
-        angel.withdraw(info.pid, amount, account);
+        angel.withdraw(info.pid, amount, user);
         info.totalBalance = info.totalBalance.sub(amount);
     }
 
@@ -319,7 +319,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         angel.harvest(info.pid, from, to);
     }
 
-    function _emergencyWithdrawAngel(address account, IAngel angel)
+    function _emergencyWithdrawAngel(address user, IAngel angel)
         internal
         nonReentrant
     {
@@ -329,8 +329,8 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             "_emergencyAngel",
             "Fountain: not added by angel"
         );
-        uint256 amount = balanceOf(account);
-        angel.emergencyWithdraw(info.pid, account);
+        uint256 amount = balanceOf(user);
+        angel.emergencyWithdraw(info.pid, user);
         info.totalBalance = info.totalBalance.sub(amount);
     }
 
