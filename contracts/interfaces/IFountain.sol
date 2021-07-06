@@ -13,6 +13,8 @@ interface IFountain is IERC20, IERC20Permit {
     function archangel() external view returns (address);
     function joinedAngel(address user) external view returns (address[] memory);
     function angelInfo(address angel) external view returns (uint256, uint256);
+    function joinTimeLimit(address owner, address sender) external view returns (uint256);
+    function joinNonces(address owner) external view returns (uint256);
     function harvestTimeLimit(address owner, address sender) external view returns (uint256);
     function harvestNonces(address owner) external view returns (uint256);
 
@@ -36,6 +38,37 @@ interface IFountain is IERC20, IERC20Permit {
         bytes32 r,
         bytes32 s
     ) external returns (bool);
+
+    function joinApprove(address sender, uint256 timeLimit) external returns (bool);
+    function joinPermit(
+        address user,
+        address sender,
+        uint256 timeLimit,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+    function joinAngelFor(address angel, address user) external;
+    function joinAngelsFor(address[] calldata angels, address user) external;
+    function joinAngelForWithPermit(
+        address angel,
+        address user,
+        uint256 timeLimit,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+    function joinAngelsForWithPermit(
+        address[] calldata angels,
+        address user,
+        uint256 timeLimit,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
     function harvestApprove(address sender, uint256 timeLimit) external returns (bool);
     function harvestPermit(
         address owner,
