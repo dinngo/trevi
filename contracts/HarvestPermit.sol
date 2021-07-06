@@ -5,7 +5,7 @@ pragma solidity 0.6.12;
 import "./FountainBase.sol";
 
 /// @title Staking vault of lpTokens
-abstract contract FountainPermit is FountainBase {
+abstract contract HarvestPermit is FountainBase {
     using Counters for Counters.Counter;
 
     mapping(address => mapping(address => uint256)) private _timeLimits;
