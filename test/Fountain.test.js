@@ -44,6 +44,14 @@ const HarvestPermit = [
   { name: 'deadline', type: 'uint256' },
 ];
 
+const JoinPermit = [
+  { name: 'user', type: 'address' },
+  { name: 'sender', type: 'address' },
+  { name: 'timeLimit', type: 'uint256' },
+  { name: 'nonce', type: 'uint256' },
+  { name: 'deadline', type: 'uint256' },
+];
+
 contract('Fountain', function([_, user, someone, rewarder, owner]) {
   beforeEach(async function() {
     this.archangel = await Archangel.new({ from: owner });
@@ -151,7 +159,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const receipt = await this.fountain.joinAngel(this.angel1.address, {
           from: user,
         });
-        expectEvent(receipt, 'Joined', {
+        expectEvent(receipt, 'Join', {
           user: user,
           angel: this.angel1.address,
         });
@@ -181,11 +189,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             from: user,
           }
         );
-        expectEvent(receipt, 'Joined', {
+        expectEvent(receipt, 'Join', {
           user: user,
           angel: this.angel1.address,
         });
-        expectEvent(receipt, 'Joined', {
+        expectEvent(receipt, 'Join', {
           user: user,
           angel: this.angel2.address,
         });
@@ -203,6 +211,204 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           'Fountain: not added by angel'
         );
       });
+
+      describe('join for', async function() {
+        beforeEach(async function() {
+          // Add from Angel
+          await this.angel1.add(
+            new BN('10'),
+            this.stkToken.address,
+            ZERO_ADDRESS,
+            { from: rewarder }
+          );
+          // Add from Angel
+          await this.angel2.add(
+            new BN('10'),
+            this.stkToken.address,
+            ZERO_ADDRESS,
+            { from: rewarder }
+          );
+          const timeLimit = (await latest()).add(seconds(86400));
+          await this.fountain.joinApprove(someone, timeLimit, {
+            from: user,
+          });
+        });
+
+        it('join single for', async function() {
+          // someone join angel for user from fountain
+          const receipt = await this.fountain.joinAngelFor(
+            this.angel1.address,
+            user,
+            {
+              from: someone,
+            }
+          );
+          expectEvent(receipt, 'Join', {
+            user: user,
+            angel: this.angel1.address,
+          });
+          const angels = await this.fountain.joinedAngel.call(user);
+          expect(angels[0]).eq(this.angel1.address);
+        });
+
+        it('join multiple for', async function() {
+          // someone join angel for user from fountain
+          const receipt = await this.fountain.joinAngelsFor(
+            [this.angel1.address, this.angel2.address],
+            user,
+            {
+              from: someone,
+            }
+          );
+          expectEvent(receipt, 'Join', {
+            user: user,
+            angel: this.angel1.address,
+          });
+          expectEvent(receipt, 'Join', {
+            user: user,
+            angel: this.angel2.address,
+          });
+          const angels = await this.fountain.joinedAngel.call(user);
+          expect(angels[0]).eq(this.angel1.address);
+          expect(angels[1]).eq(this.angel2.address);
+        });
+      });
+
+      describe('join permit', async function() {
+        it('normal', async function() {
+          const name = await this.fountain.name.call();
+          const version = '1';
+          const chainId = await web3.eth.getChainId();
+          const verifyingContract = this.fountain.address;
+          const wallet = await web3.eth.accounts.create();
+          const user = wallet.address;
+          const sender = someone;
+          const timeLimit = (await latest()).add(seconds(300));
+          const nonce = 0;
+          const deadline = MAX_UINT256;
+          const data = {
+            primaryType: 'JoinPermit',
+            types: { EIP712Domain, JoinPermit },
+            domain: { name, version, chainId, verifyingContract },
+            message: { user, sender, timeLimit, nonce, deadline },
+          };
+          const signature = ethSigUtil.signTypedMessage(
+            utils.hexToBytes(wallet.privateKey),
+            {
+              data,
+            }
+          );
+          const { v, r, s } = fromRpcSig(signature);
+          const receipt = await this.fountain.joinPermit(
+            user,
+            sender,
+            timeLimit,
+            deadline,
+            v,
+            r,
+            s
+          );
+          expectEvent(receipt, 'JoinApproval', [user]);
+          expect(await this.fountain.joinNonces(user)).to.be.bignumber.eq('1');
+          expect(
+            await this.fountain.joinTimeLimit.call(user, sender)
+          ).to.be.bignumber.eq(timeLimit);
+        });
+      });
+
+      describe('join for with one-time permit', async function() {
+        let wallet;
+        let user;
+        const sender = someone;
+        const timeLimit = new BN('1');
+        const deadline = MAX_UINT256;
+        let data;
+        let signature;
+
+        beforeEach(async function() {
+          // Add from Angel
+          await this.angel1.add(
+            new BN('10'),
+            this.stkToken.address,
+            ZERO_ADDRESS,
+            { from: rewarder }
+          );
+          // Add from Angel
+          await this.angel2.add(
+            new BN('10'),
+            this.stkToken.address,
+            ZERO_ADDRESS,
+            { from: rewarder }
+          );
+          const name = await this.fountain.name.call();
+          const version = '1';
+          const chainId = await web3.eth.getChainId();
+          const verifyingContract = this.fountain.address;
+          wallet = await web3.eth.accounts.create();
+          user = wallet.address;
+          const nonce = 0;
+          const data = {
+            primaryType: 'JoinPermit',
+            types: { EIP712Domain, JoinPermit },
+            domain: { name, version, chainId, verifyingContract },
+            message: { user, sender, timeLimit, nonce, deadline },
+          };
+          signature = ethSigUtil.signTypedMessage(
+            utils.hexToBytes(wallet.privateKey),
+            {
+              data,
+            }
+          );
+        });
+
+        it('single', async function() {
+          const { v, r, s } = fromRpcSig(signature);
+          const receipt = await this.fountain.joinAngelForWithPermit(
+            this.angel1.address,
+            wallet.address,
+            timeLimit,
+            deadline,
+            v,
+            r,
+            s,
+            {
+              from: someone,
+            }
+          );
+          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
+          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expect(angels[0]).eq(this.angel1.address);
+          // Should expire next time
+          increase(seconds(15));
+          await expectRevert(
+            this.fountain.joinAngelFor(this.angel2.address, wallet.address, {
+              from: someone,
+            }),
+            'join not allowed'
+          );
+        });
+
+        it('multiple', async function() {
+          const { v, r, s } = fromRpcSig(signature);
+          const receipt = await this.fountain.joinAngelsForWithPermit(
+            [this.angel1.address, this.angel2.address],
+            wallet.address,
+            timeLimit,
+            deadline,
+            v,
+            r,
+            s,
+            {
+              from: someone,
+            }
+          );
+          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
+          expectEvent(receipt, 'Join', [wallet.address, this.angel2.address]);
+          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expect(angels[0]).eq(this.angel1.address);
+          expect(angels[1]).eq(this.angel2.address);
+        });
+      });
     });
 
     describe('quit angel', function() {
@@ -212,7 +418,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         // user join angel from fountain
         await this.fountain.joinAngel(this.angel1.address, {
@@ -225,7 +433,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const receipt = await this.fountain.quitAngel(this.angel1.address, {
           from: user,
         });
-        expectEvent(receipt, 'Quitted', {
+        expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
         });
@@ -237,7 +445,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         // user join angel from fountain
         await this.fountain.joinAngel(this.angel2.address, {
@@ -247,11 +457,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const receipt = await this.fountain.quitAllAngel({
           from: user,
         });
-        expectEvent(receipt, 'Quitted', {
+        expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
         });
-        expectEvent(receipt, 'Quitted', {
+        expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel2.address,
         });
@@ -275,13 +485,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         await this.angel2.add(
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
       });
 
@@ -390,7 +604,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         // join angel
         await this.fountain.joinAngel(this.angel1.address, { from: user });
@@ -499,13 +715,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         await this.angel2.add(
           new BN('10'),
           this.stkToken.address,
           ZERO_ADDRESS,
-          { from: rewarder }
+          {
+            from: rewarder,
+          }
         );
         // join angel1
         await this.fountain.joinAngel(this.angel1.address, { from: user });
