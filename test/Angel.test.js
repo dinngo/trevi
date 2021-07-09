@@ -52,7 +52,7 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angelFactory.create(this.rwdToken.address, { from: rewarder }),
       Angel
     );
-    await this.angel.setSushiPerSecond(ether('0.01'), { from: rewarder });
+    await this.angel.setGracePerSecond(ether('0.01'), { from: rewarder });
     await this.rwdToken.transfer(this.angel.address, ether('5000'), {
       from: rewarder,
     });
@@ -128,8 +128,8 @@ contract('Angel', function([_, user, rewarder]) {
     });
   });
 
-  describe('PendingSushi', function() {
-    it('PendingSushi should equal ExpectedSushi', async function() {
+  describe('PendingGrace', function() {
+    it('PendingGrace should equal ExpectedGrace', async function() {
       await this.angel.add(
         new BN('10'),
         this.stkToken.address,
@@ -145,11 +145,11 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(seconds(86400));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
-      let expectedSushi = new BN('10000000000000000').mul(
+      let expectedGrace = new BN('10000000000000000').mul(
         timestamp2.sub(timestamp)
       );
-      let pendingSushi = await this.angel.pendingSushi.call(new BN('0'), user);
-      expect(pendingSushi).to.be.bignumber.lte(expectedSushi);
+      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
+      expect(pendingGrace).to.be.bignumber.lte(expectedGrace);
     });
 
     it('When time is lastRewardTime', async function() {
@@ -165,11 +165,11 @@ contract('Angel', function([_, user, rewarder]) {
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
-      let expectedSushi = new BN('10000000000000000').mul(
+      let expectedGrace = new BN('10000000000000000').mul(
         timestamp2.sub(timestamp)
       );
-      let pendingSushi = await this.angel.pendingSushi.call(new BN('0'), user);
-      expect(pendingSushi).to.be.bignumber.gte(expectedSushi);
+      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
+      expect(pendingGrace).to.be.bignumber.gte(expectedGrace);
     });
   });
 
@@ -231,8 +231,8 @@ contract('Angel', function([_, user, rewarder]) {
         lastRewardTime: (await this.angel.poolInfo.call(new BN('0')))
           .lastRewardTime,
         lpSupply: await this.stkToken.balanceOf.call(this.angel.address),
-        accSushiPerShare: (await this.angel.poolInfo.call(new BN('0')))
-          .accSushiPerShare,
+        accGracePerShare: (await this.angel.poolInfo.call(new BN('0')))
+          .accGracePerShare,
       });
     });
   });

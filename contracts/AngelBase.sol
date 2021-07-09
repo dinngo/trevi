@@ -26,7 +26,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
     /// @notice Info of each MCV2 user.
     /// `amount` LP token amount the user has provided.
-    /// `rewardDebt` The amount of SUSHI entitled to the user.
+    /// `rewardDebt` The amount of GRACE entitled to the user.
     struct UserInfo {
         uint256 amount;
         int256 rewardDebt;
@@ -34,15 +34,15 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
     /// @notice Info of each MCV2 pool.
     /// `allocPoint` The amount of allocation points assigned to the pool.
-    /// Also known as the amount of SUSHI to distribute per block.
+    /// Also known as the amount of GRACE to distribute per block.
     struct PoolInfo {
-        uint128 accSushiPerShare;
+        uint128 accGracePerShare;
         uint64 lastRewardTime;
         uint64 allocPoint;
     }
 
-    /// @notice Address of SUSHI contract.
-    IERC20 public immutable SUSHI;
+    /// @notice Address of GRACE contract.
+    IERC20 public immutable GRACE;
     // @notice The migrator contract. It has a lot of power. Can only be set through governance (owner).
 
     /// @notice Info of each MCV2 pool.
@@ -57,8 +57,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @dev Total allocation points. Must be the sum of all allocation points in all pools.
     uint256 public totalAllocPoint;
 
-    uint256 public sushiPerSecond;
-    uint256 private constant ACC_SUSHI_PRECISION = 1e12;
+    uint256 public gracePerSecond;
+    uint256 private constant ACC_GRACE_PRECISION = 1e12;
 
     ////////////////////////// New
     IArchangel public immutable archangel;
@@ -99,9 +99,9 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 indexed pid,
         uint64 lastRewardTime,
         uint256 lpSupply,
-        uint256 accSushiPerShare
+        uint256 accGracePerShare
     );
-    event LogSushiPerSecond(uint256 sushiPerSecond);
+    event LogGracePerSecond(uint256 gracePerSecond);
 
     modifier onlyFountain(uint256 pid) {
         _requireMsg(
@@ -112,9 +112,9 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         _;
     }
 
-    /// @param _sushi The SUSHI token contract address.
-    constructor(IERC20 _sushi) public {
-        SUSHI = _sushi;
+    /// @param _grace The GRACE token contract address.
+    constructor(IERC20 _grace) public {
+        GRACE = _grace;
         IAngelFactory _f = IAngelFactory(msg.sender);
         factory = _f;
         archangel = IArchangel(_f.archangel());
@@ -149,7 +149,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             PoolInfo({
                 allocPoint: allocPoint.to64(),
                 lastRewardTime: block.timestamp.to64(),
-                accSushiPerShare: 0
+                accGracePerShare: 0
             })
         );
         emit LogPoolAddition(pid, allocPoint, _lpToken, _rewarder);
@@ -161,7 +161,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         fountain.setPoolId(pid);
     }
 
-    /// @notice Update the given pool's SUSHI allocation point and `IRewarder` contract. Can only be called by the owner.
+    /// @notice Update the given pool's GRACE allocation point and `IRewarder` contract. Can only be called by the owner.
     /// @param _pid The index of the pool. See `poolInfo`.
     /// @param _allocPoint New AP of the pool.
     /// @param _rewarder Address of the rewarder delegate.
@@ -187,25 +187,25 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         );
     }
 
-    /// @notice Sets the sushi per second to be distributed. Can only be called by the owner.
-    /// @param _sushiPerSecond The amount of Sushi to be distributed per second.
-    function setSushiPerSecond(uint256 _sushiPerSecond) public onlyOwner {
-        sushiPerSecond = _sushiPerSecond;
-        emit LogSushiPerSecond(_sushiPerSecond);
+    /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
+    /// @param _gracePerSecond The amount of Grace to be distributed per second.
+    function setGracePerSecond(uint256 _gracePerSecond) public onlyOwner {
+        gracePerSecond = _gracePerSecond;
+        emit LogGracePerSecond(_gracePerSecond);
     }
 
-    /// @notice View function to see pending SUSHI on frontend.
+    /// @notice View function to see pending GRACE on frontend.
     /// @param _pid The index of the pool. See `poolInfo`.
     /// @param _user Address of user.
-    /// @return pending SUSHI reward for a given user.
-    function pendingSushi(uint256 _pid, address _user)
+    /// @return pending GRACE reward for a given user.
+    function pendingGrace(uint256 _pid, address _user)
         external
         view
         returns (uint256 pending)
     {
         PoolInfo memory pool = poolInfo[_pid];
         UserInfo storage user = userInfo[_pid][_user];
-        uint256 accSushiPerShare = pool.accSushiPerShare;
+        uint256 accGracePerShare = pool.accGracePerShare;
         ////////////////////////// New
         // uint256 lpSupply = lpToken[_pid].balanceOf(address(this));
         // Need to get the lpSupply from fountain
@@ -214,14 +214,14 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
         if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
             uint256 time = block.timestamp.sub(pool.lastRewardTime);
-            uint256 sushiReward =
-                time.mul(sushiPerSecond).mul(pool.allocPoint) / totalAllocPoint;
-            accSushiPerShare = accSushiPerShare.add(
-                sushiReward.mul(ACC_SUSHI_PRECISION) / lpSupply
+            uint256 graceReward =
+                time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
+            accGracePerShare = accGracePerShare.add(
+                graceReward.mul(ACC_GRACE_PRECISION) / lpSupply
             );
         }
         pending = int256(
-            user.amount.mul(accSushiPerShare) / ACC_SUSHI_PRECISION
+            user.amount.mul(accGracePerShare) / ACC_GRACE_PRECISION
         )
             .sub(user.rewardDebt)
             .toUInt256();
@@ -250,11 +250,11 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
             if (lpSupply > 0) {
                 uint256 time = block.timestamp.sub(pool.lastRewardTime);
-                uint256 sushiReward =
-                    time.mul(sushiPerSecond).mul(pool.allocPoint) /
+                uint256 graceReward =
+                    time.mul(gracePerSecond).mul(pool.allocPoint) /
                         totalAllocPoint;
-                pool.accSushiPerShare = pool.accSushiPerShare.add(
-                    (sushiReward.mul(ACC_SUSHI_PRECISION) / lpSupply).to128()
+                pool.accGracePerShare = pool.accGracePerShare.add(
+                    (graceReward.mul(ACC_GRACE_PRECISION) / lpSupply).to128()
                 );
             }
             pool.lastRewardTime = block.timestamp.to64();
@@ -263,12 +263,12 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
                 pid,
                 pool.lastRewardTime,
                 lpSupply,
-                pool.accSushiPerShare
+                pool.accGracePerShare
             );
         }
     }
 
-    /// @notice Deposit LP tokens to MCV2 for SUSHI allocation.
+    /// @notice Deposit LP tokens to MCV2 for GRACE allocation.
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param amount LP token amount to deposit.
     /// @param to The receiver of `amount` deposit benefit.
@@ -283,13 +283,13 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         // Effects
         user.amount = user.amount.add(amount);
         user.rewardDebt = user.rewardDebt.add(
-            int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION)
+            int256(amount.mul(pool.accGracePerShare) / ACC_GRACE_PRECISION)
         );
 
         // Interactions
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(pid, to, to, 0, user.amount);
+            _rewarder.onGraceReward(pid, to, to, 0, user.amount);
         }
 
         ////////////////////////// New
@@ -317,7 +317,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
         // Effects
         user.rewardDebt = user.rewardDebt.sub(
-            int256(amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION)
+            int256(amount.mul(pool.accGracePerShare) / ACC_GRACE_PRECISION)
         );
         user.amount = user.amount.sub(amount);
 
@@ -326,8 +326,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         if (address(_rewarder) != address(0)) {
             ////////////////////////// New
             // Delegate by fountain
-            // _rewarder.onSushiReward(pid, msg.sender, to, 0, user.amount);
-            _rewarder.onSushiReward(pid, to, to, 0, user.amount);
+            // _rewarder.onGraceReward(pid, msg.sender, to, 0, user.amount);
+            _rewarder.onGraceReward(pid, to, to, 0, user.amount);
         }
 
         ////////////////////////// New
@@ -340,7 +340,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
     /// @notice Harvest proceeds for transaction sender to `to`.
     /// @param pid The index of the pool. See `poolInfo`.
-    /// @param to Receiver of SUSHI rewards.
+    /// @param to Receiver of GRACE rewards.
     function harvest(
         uint256 pid,
         address from,
@@ -351,38 +351,38 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         // Delegate by fountain
         // UserInfo storage user = userInfo[pid][msg.sender];
         UserInfo storage user = userInfo[pid][from];
-        int256 accumulatedSushi =
+        int256 accumulatedGrace =
             int256(
-                user.amount.mul(pool.accSushiPerShare) / ACC_SUSHI_PRECISION
+                user.amount.mul(pool.accGracePerShare) / ACC_GRACE_PRECISION
             );
-        uint256 _pendingSushi =
-            accumulatedSushi.sub(user.rewardDebt).toUInt256();
+        uint256 _pendingGrace =
+            accumulatedGrace.sub(user.rewardDebt).toUInt256();
 
         // Effects
-        user.rewardDebt = accumulatedSushi;
+        user.rewardDebt = accumulatedGrace;
 
         // Interactions
-        if (_pendingSushi != 0) {
-            SUSHI.safeTransfer(to, _pendingSushi);
+        if (_pendingGrace != 0) {
+            GRACE.safeTransfer(to, _pendingGrace);
         }
 
         IRewarder _rewarder = rewarder[pid];
         if (address(_rewarder) != address(0)) {
-            _rewarder.onSushiReward(
+            _rewarder.onGraceReward(
                 pid,
                 ////////////////////////// New
                 // Delegate by fountain
                 // msg.sender,
                 to,
                 to,
-                _pendingSushi,
+                _pendingGrace,
                 user.amount
             );
         }
 
         ////////////////////////// New
-        // emit Harvest(msg.sender, pid, _pendingSushi);
-        emit Harvest(from, pid, _pendingSushi);
+        // emit Harvest(msg.sender, pid, _pendingGrace);
+        emit Harvest(from, pid, _pendingGrace);
     }
 
     /// @notice Withdraw without caring about rewards. EMERGENCY ONLY.
@@ -404,8 +404,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         if (address(_rewarder) != address(0)) {
             ////////////////////////// New
             // Delegate by fountain
-            // _rewarder.onSushiReward(pid, msg.sender, to, 0, 0);
-            _rewarder.onSushiReward(pid, to, to, 0, 0);
+            // _rewarder.onGraceReward(pid, msg.sender, to, 0, 0);
+            _rewarder.onGraceReward(pid, to, to, 0, 0);
         }
 
         // Note: transfer can fail or succeed if `amount` is zero.
@@ -427,7 +427,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         returns (uint256)
     {
         _requireMsg(
-            token != SUSHI,
+            token != GRACE,
             "rescueERC20",
             "cannot rescue reward token"
         );

@@ -23,15 +23,15 @@ contract RewarderMock is IRewarder {
         MASTERCHEF_V2 = _MASTERCHEF_V2;
     }
 
-    function onSushiReward(
+    function onGraceReward(
         uint256,
         address,
         address to,
-        uint256 sushiAmount,
+        uint256 graceAmount,
         uint256
     ) external override onlyMCV2 {
         uint256 pendingReward =
-            sushiAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
+            graceAmount.mul(rewardMultiplier) / REWARD_TOKEN_DIVISOR;
         uint256 rewardBal = rewardToken.balanceOf(address(this));
         if (pendingReward > rewardBal) {
             rewardToken.safeTransfer(to, rewardBal);
@@ -43,7 +43,7 @@ contract RewarderMock is IRewarder {
     function pendingTokens(
         uint256,
         address,
-        uint256 sushiAmount
+        uint256 graceAmount
     )
         external
         view
@@ -54,7 +54,7 @@ contract RewarderMock is IRewarder {
         _rewardTokens[0] = (rewardToken);
         uint256[] memory _rewardAmounts = new uint256[](1);
         _rewardAmounts[0] =
-            sushiAmount.mul(rewardMultiplier) /
+            graceAmount.mul(rewardMultiplier) /
             REWARD_TOKEN_DIVISOR;
         return (_rewardTokens, _rewardAmounts);
     }
