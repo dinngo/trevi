@@ -405,7 +405,14 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             ////////////////////////// New
             // Delegate by fountain
             // _rewarder.onGraceReward(pid, msg.sender, to, 0, 0);
-            _rewarder.onGraceReward(pid, to, to, 0, 0);
+            // Execution of emergencyWithdraw should never fail. Considering
+            // the possibility of failure caused by rewarder execution, use
+            // try/catch on rewarder execution with limited gas
+            try
+                _rewarder.onGraceReward{gas: 1000000}(pid, to, to, 0, 0)
+            {} catch {
+                return;
+            }
         }
 
         // Note: transfer can fail or succeed if `amount` is zero.
