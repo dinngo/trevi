@@ -827,7 +827,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
@@ -863,7 +865,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
 
@@ -910,7 +914,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
 
       describe('harvest from with permit', async function() {
-        const sender = someone;
         let timeLimit;
         const deadline = MAX_UINT256;
         let data;
@@ -921,9 +924,8 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          await this.fountain.transfer(owner, depositAmount, {
-            from: user,
-          });
+          const owner = user;
+          const sender = someone;
           await increase(seconds(300));
           timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -933,22 +935,19 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             domain: { name, version, chainId, verifyingContract },
             message: { owner, sender, timeLimit, nonce, deadline },
           };
-          signature = ethSigUtil.signTypedMessage(
-            getMnemonicPrivateKey(owner),
-            {
-              data,
-            }
-          );
+          signature = ethSigUtil.signTypedMessage(getMnemonicPrivateKey(user), {
+            data,
+          });
         });
 
         it('harvest joined', async function() {
           // user harvest angel1
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingGrace.call(pid, owner);
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel1.address,
-            owner,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -958,27 +957,27 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [owner]);
-          const info1After = await this.angel1.userInfo.call(pid, owner);
-          const pendingAfter = await this.angel1.pendingGrace.call(pid, owner);
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(owner);
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
           // user harvest angel2
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel2.pendingGrace.call(pid, owner);
+          const pendingBefore = await this.angel2.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel2.address,
-            owner,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -988,23 +987,21 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [owner]);
+          expectEvent(receipt, 'Harvest', [user]);
           const tokenUser = await this.rwdToken2.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken2.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(owner);
           expect(pendingBefore).to.be.bignumber.eq(ether('0'));
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
           expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
         });
 
         it('harvest all', async function() {
           // user harvest all
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingGrace.call(pid, owner);
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestAllFromWithPermit(
-            owner,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -1012,17 +1009,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             s,
             { from: someone }
           );
-          expectEvent(receipt, 'Harvest', [owner]);
-          const info1After = await this.angel1.userInfo.call(pid, owner);
-          const pendingAfter = await this.angel1.pendingGrace.call(pid, owner);
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(owner);
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
     });
