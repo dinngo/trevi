@@ -15,7 +15,7 @@ const utils = web3.utils;
 const ethSigUtil = require('eth-sig-util');
 const { fromRpcSig } = require('ethereumjs-util');
 const { EIP712Domain, domainSeparator } = require('./helpers/eip712');
-const { getCreated } = require('./helpers/utils');
+const { getCreated, getMnemonicPrivateKey } = require('./helpers/utils');
 
 const { expect } = require('chai');
 
@@ -280,8 +280,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const user = wallet.address;
           const sender = someone;
           const timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -293,7 +291,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { user, sender, timeLimit, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(user),
             {
               data,
             }
@@ -317,8 +315,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
 
       describe('join for with one-time permit', async function() {
-        let wallet;
-        let user;
         const sender = someone;
         const timeLimit = new BN('1');
         const deadline = MAX_UINT256;
@@ -344,8 +340,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          wallet = await web3.eth.accounts.create();
-          user = wallet.address;
           const nonce = 0;
           const data = {
             primaryType: 'JoinPermit',
@@ -353,19 +347,16 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             domain: { name, version, chainId, verifyingContract },
             message: { user, sender, timeLimit, nonce, deadline },
           };
-          signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
-            {
-              data,
-            }
-          );
+          signature = ethSigUtil.signTypedMessage(getMnemonicPrivateKey(user), {
+            data,
+          });
         });
 
         it('single', async function() {
           const { v, r, s } = fromRpcSig(signature);
           const receipt = await this.fountain.joinAngelForWithPermit(
             this.angel1.address,
-            wallet.address,
+            user,
             timeLimit,
             deadline,
             v,
@@ -375,13 +366,13 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
-          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expectEvent(receipt, 'Join', [user, this.angel1.address]);
+          const angels = await this.fountain.joinedAngel.call(user);
           expect(angels[0]).eq(this.angel1.address);
           // Should expire next time
           increase(seconds(15));
           await expectRevert(
-            this.fountain.joinAngelFor(this.angel2.address, wallet.address, {
+            this.fountain.joinAngelFor(this.angel2.address, user, {
               from: someone,
             }),
             'join not allowed'
@@ -392,7 +383,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const { v, r, s } = fromRpcSig(signature);
           const receipt = await this.fountain.joinAngelsForWithPermit(
             [this.angel1.address, this.angel2.address],
-            wallet.address,
+            user,
             timeLimit,
             deadline,
             v,
@@ -402,9 +393,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
-          expectEvent(receipt, 'Join', [wallet.address, this.angel2.address]);
-          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expectEvent(receipt, 'Join', [user, this.angel1.address]);
+          expectEvent(receipt, 'Join', [user, this.angel2.address]);
+          const angels = await this.fountain.joinedAngel.call(user);
           expect(angels[0]).eq(this.angel1.address);
           expect(angels[1]).eq(this.angel2.address);
         });
@@ -836,7 +827,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
@@ -872,7 +865,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
 
@@ -882,8 +877,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const sender = someone;
           const timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -895,7 +888,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, sender, timeLimit, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }
@@ -921,9 +914,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
 
       describe('harvest from with permit', async function() {
-        let wallet;
-        let owner;
-        const sender = someone;
         let timeLimit;
         const deadline = MAX_UINT256;
         let data;
@@ -934,11 +924,8 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          wallet = await web3.eth.accounts.create();
-          owner = wallet.address;
-          await this.fountain.transfer(wallet.address, depositAmount, {
-            from: user,
-          });
+          const owner = user;
+          const sender = someone;
           await increase(seconds(300));
           timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -948,25 +935,19 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             domain: { name, version, chainId, verifyingContract },
             message: { owner, sender, timeLimit, nonce, deadline },
           };
-          signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
-            {
-              data,
-            }
-          );
+          signature = ethSigUtil.signTypedMessage(getMnemonicPrivateKey(user), {
+            data,
+          });
         });
 
         it('harvest joined', async function() {
           // user harvest angel1
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingGrace.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel1.address,
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -976,38 +957,27 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
-          const info1After = await this.angel1.userInfo.call(
-            pid,
-            wallet.address
-          );
-          const pendingAfter = await this.angel1.pendingGrace.call(
-            pid,
-            wallet.address
-          );
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
           // user harvest angel2
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel2.pendingGrace.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel2.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel2.address,
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -1017,28 +987,21 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
+          expectEvent(receipt, 'Harvest', [user]);
           const tokenUser = await this.rwdToken2.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken2.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingBefore).to.be.bignumber.eq(ether('0'));
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
           expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
         });
 
         it('harvest all', async function() {
           // user harvest all
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingGrace.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestAllFromWithPermit(
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -1046,25 +1009,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             s,
             { from: someone }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
-          const info1After = await this.angel1.userInfo.call(
-            pid,
-            wallet.address
-          );
-          const pendingAfter = await this.angel1.pendingGrace.call(
-            pid,
-            wallet.address
-          );
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
     });
@@ -1150,8 +1105,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const spender = someone;
           const value = depositAmount;
           const nonce = 0;
@@ -1163,7 +1116,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, spender, value, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }
@@ -1191,8 +1144,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const spender = someone;
           const value = depositAmount;
           const nonce = 0;
@@ -1204,7 +1155,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, spender, value, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }
