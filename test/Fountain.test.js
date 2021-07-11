@@ -26,6 +26,7 @@ const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 const Rewarder = artifacts.require('RewarderMock');
+const BrokenRewarder = artifacts.require('BrokenRewarderMock');
 const FlashBorrower = artifacts.require('FlashBorrower');
 
 const Permit = [
@@ -140,6 +141,12 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       this.fountain = await getCreated(receipt, Fountain);
       // Get Rewarder
       this.rewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address
+      );
+      // Get Bad Rewarder
+      this.badRewarder = await BrokenRewarder.new(
         ether('1'),
         this.rwdToken2.address,
         this.angel1.address
@@ -425,6 +432,29 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         expectEvent(receipt, 'Quit', {
+          user: user,
+          angel: this.angel1.address,
+        });
+      });
+
+      it('rage quit', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.quitAngel(this.angel1.address, { from: user }),
+          'bad rewarder'
+        );
+        // user rage quit angel from fountain
+        const receipt = await this.fountain.rageQuitAngel(this.angel1.address, {
+          from: user,
+        });
+        expectEvent(receipt, 'RageQuit', {
           user: user,
           angel: this.angel1.address,
         });
@@ -1032,7 +1062,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         await this.angel1.add(
           new BN('1000'),
           this.stkToken.address,
-          ZERO_ADDRESS,
+          this.rewarder.address,
           { from: rewarder }
         );
         // join angel
@@ -1042,6 +1072,18 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         await this.fountain.deposit(depositAmount, { from: user });
+        // Set to bad rewarder after deposit
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'bad rewarder'
+        );
         await increase(seconds(300));
       });
 
