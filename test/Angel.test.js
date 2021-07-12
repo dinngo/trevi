@@ -52,10 +52,16 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angelFactory.create(this.rwdToken.address, { from: rewarder }),
       Angel
     );
-    await this.angel.setGracePerSecond(ether('0.01'), { from: rewarder });
-    await this.rwdToken.transfer(this.angel.address, ether('5000'), {
+    // Make gracePerSecond equals to the given rewardRate
+    const now = await latest();
+    const rewardDuration = duration.days(2);
+    this.rewardEndTime = new BN(now).add(new BN(rewardDuration));
+    this.rewardRate = ether('0.01');
+    const rewardAmount = this.rewardRate.mul(rewardDuration);
+    await this.rwdToken.approve(this.angel.address, rewardAmount, {
       from: rewarder,
     });
+    await this.angel.setGraceReward(rewardAmount, this.rewardEndTime, { from: rewarder });
     this.rewarder = await RewarderMock.new(
       ether('1'),
       this.dummy.address,
@@ -141,16 +147,16 @@ contract('Angel', function([_, user, rewarder]) {
         from: user,
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
-      const timestamp = await latest();
       await this.fountain.deposit(ether('1'), { from: user });
+      const timestamp = await latest();
       await increase(seconds(86400));
-      const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
-      let expectedGrace = new BN('10000000000000000').mul(
+      const timestamp2 = await latest();
+      let expectedGrace = this.rewardRate.mul(
         timestamp2.sub(timestamp)
       );
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expect(pendingGrace).to.be.bignumber.lte(expectedGrace);
+      expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
     });
 
     it('When time is lastRewardTime', async function() {
@@ -161,16 +167,36 @@ contract('Angel', function([_, user, rewarder]) {
         from: user,
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
-      const timestamp = await latest();
       await this.fountain.deposit(ether('1'), { from: user });
+      const timestamp = await latest();
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
-      const timestamp2 = await latest();
       await this.angel.updatePool(new BN('0'));
-      let expectedGrace = new BN('10000000000000000').mul(
+      const timestamp2 = await latest();
+      let expectedGrace = this.rewardRate.mul(
         timestamp2.sub(timestamp)
       );
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expect(pendingGrace).to.be.bignumber.gte(expectedGrace);
+      expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
+    });
+
+    it('When time is later than endTime', async function() {
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      await this.stkToken.approve(this.fountain.address, ether('10'), {
+        from: user,
+      });
+      await this.fountain.joinAngel(this.angel.address, { from: user });
+      await this.fountain.deposit(ether('1'), { from: user });
+      const timestamp = await latest();
+      await increase(duration.days(10));
+      const timestamp2 = this.rewardEndTime;
+      await this.angel.updatePool(new BN('0'));
+      let expectedGrace = this.rewardRate.mul(
+        timestamp2.sub(timestamp)
+      );
+      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
+      expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
     });
   });
 
