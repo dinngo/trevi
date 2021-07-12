@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 import "./libraries/boringcrypto/libraries/BoringMath.sol";
 import "./libraries/boringcrypto/BoringBatchable.sol";
 import "./libraries/boringcrypto/BoringOwnable.sol";
+import "./libraries/Math.sol";
 import "./libraries/SignedSafeMath.sol";
 import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
@@ -63,6 +64,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     ////////////////////////// New
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
+    uint256 public endTime = 0;
 
     event Deposit(
         address indexed user,
@@ -187,9 +189,31 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         );
     }
 
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return Math.min(block.timestamp, endTime);
+    }
+
+    /// TODO: Add func description
+    function setGraceReward(uint256 _amount, uint256 _endTime) external onlyOwner {
+        require(block.timestamp > endTime, "last period not finish yet");
+        // TODO: should check _amount?
+        require(_amount > 0, "grace amount should be greater than 0");
+        require(_endTime > block.timestamp, "end time should be in the future");
+        // massUpdatePools
+        uint256 len = lpToken.length;
+        for (uint256 i = 0; i < len; ++i) {
+            updatePool(i);
+        }
+        uint256 duration = _endTime.sub(block.timestamp);
+        // TODO: inject perSecond code and delete func?
+        _setGracePerSecond(_amount/duration);
+        endTime = _endTime;
+        GRACE.safeTransferFrom(msg.sender, address(this), _amount);
+    }
+
     /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
-    function setGracePerSecond(uint256 _gracePerSecond) external onlyOwner {
+    function _setGracePerSecond(uint256 _gracePerSecond) internal {
         gracePerSecond = _gracePerSecond;
         emit LogGracePerSecond(_gracePerSecond);
     }
@@ -212,8 +236,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IFountain fountain =
             IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
-        if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
-            uint256 time = block.timestamp.sub(pool.lastRewardTime);
+        if (lastTimeRewardApplicable() > pool.lastRewardTime && lpSupply != 0) {
+            uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
             uint256 graceReward =
                 time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
             accGracePerShare = accGracePerShare.add(
@@ -248,8 +272,9 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             IFountain fountain =
                 IFountain(archangel.getFountain(address(lpToken[pid])));
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
-            if (lpSupply > 0) {
-                uint256 time = block.timestamp.sub(pool.lastRewardTime);
+            // Only accumulate reward before end time
+            if (lpSupply > 0 && lastTimeRewardApplicable() > pool.lastRewardTime) {
+                uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
                 uint256 graceReward =
                     time.mul(gracePerSecond).mul(pool.allocPoint) /
                         totalAllocPoint;
