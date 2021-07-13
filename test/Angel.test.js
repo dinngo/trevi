@@ -213,6 +213,26 @@ contract('Angel', function([_, user, rewarder]) {
         }
       );
     });
+
+    it('Should revert when adding repeat lp token', async function() {
+      await this.angel.add(
+        new BN('10'),
+        this.stkToken.address,
+        this.rewarder.address,
+        {
+          from: rewarder,
+        }
+      );
+      await expectRevert(
+        this.angel.add(
+          new BN('10'),
+          this.stkToken.address,
+          this.rewarder.address,
+          { from: rewarder }
+        ),
+        'angel is set'
+      );
+    });
   });
 
   describe('UpdatePool', function() {
