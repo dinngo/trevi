@@ -87,7 +87,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(_msgSender());
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(info.isSet == false, "setPoolId", "Fountain: angel is set");
+        _requireMsg(!info.isSet, "setPoolId", "Fountain: angel is set");
         _requireMsg(
             angel.lpToken(pid) == address(stakingToken),
             "setPoolId",
