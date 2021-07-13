@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.6.12;
 
-import "../../interfaces/IERC20.sol";
-import "../../interfaces/IERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/drafts/IERC20Permit.sol";
 
 library BoringERC20 {
     function safeSymbol(IERC20 token) internal view returns (string memory) {

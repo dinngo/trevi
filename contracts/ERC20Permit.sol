@@ -2,11 +2,12 @@
 
 pragma solidity >=0.6.5 <0.8.0;
 
+import "@openzeppelin/contracts/drafts/IERC20Permit.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/drafts/EIP712.sol";
+
 import "./ERC20.sol";
-import "./interfaces/IERC20Permit.sol";
-import "./ECDSA.sol";
-import "./Counters.sol";
-import "./EIP712.sol";
 
 /**
  * @dev Implementation of the ERC20 Permit extension allowing approvals to be made via signatures, as defined in

@@ -2,8 +2,9 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "../libraries/interfaces/IERC3156.sol";
-import "../libraries/interfaces/IERC20.sol";
 
 contract FlashBorrower is IERC3156FlashBorrower {
     function onFlashLoan(
