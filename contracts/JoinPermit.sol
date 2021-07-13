@@ -12,7 +12,7 @@ abstract contract JoinPermit is FountainBase {
     mapping(address => Counters.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
-    bytes32 private immutable _JOIN_PERMIT_TYPEHASH =
+    bytes32 private constant _JOIN_PERMIT_TYPEHASH =
         keccak256(
             "JoinPermit(address user,address sender,uint256 timeLimit,uint256 nonce,uint256 deadline)"
         );
