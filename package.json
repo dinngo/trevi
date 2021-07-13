@@ -23,7 +23,9 @@
     "solhint": "3.0.0",
     "truffle": "^5.3.9"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@openzeppelin/contracts": "3.4.1"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "npm run lint:prettier && npm run lint:solhint"

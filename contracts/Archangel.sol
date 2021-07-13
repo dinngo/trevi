@@ -2,12 +2,13 @@
 
 pragma solidity 0.6.12;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+
 import "./interfaces/IArchangel.sol";
 import "./interfaces/IFlashLender.sol";
 import "./AngelFactory.sol";
 import "./FountainFactory.sol";
-import "./libraries/Ownable.sol";
-import "./libraries/SafeERC20.sol";
 import "./utils/ErrorMsg.sol";
 
 /// @title Staking system manager

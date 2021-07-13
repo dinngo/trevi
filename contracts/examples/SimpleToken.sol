@@ -2,7 +2,7 @@
 
 pragma solidity 0.6.12;
 
-import "../libraries/ERC20.sol";
+import "../ERC20.sol";
 
 contract SimpleToken is ERC20 {
     constructor(string memory name_,
