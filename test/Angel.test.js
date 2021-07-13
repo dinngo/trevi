@@ -257,6 +257,40 @@ contract('Angel', function([_, user, rewarder]) {
     });
   });
 
+  describe('SetGraceReward', function() {
+    it('Allocate again when the perious one is not ended yet', async function() {
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGraceReward(ether('1'), rewardEndTimeTemp, {from: rewarder}),
+        'last period not finish yet'
+      );
+    });
+
+    it('Allocate zero amount', async function() {
+      // Forward to after the expiration first
+      await increase(duration.days(10));
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGraceReward(ether('0'), rewardEndTimeTemp, {from: rewarder}),
+        'grace amount should be greater than 0'
+      );
+    });
+
+    it('End time not later than now', async function() {
+      // Forward to after the expiration first
+      await increase(duration.days(10));
+      const now = await latest();
+      await expectRevert(
+        this.angel.setGraceReward(ether('1'), now, {from: rewarder}),
+        'end time should be in the future'
+      );
+    });
+  });
+  
   describe('MassUpdatePools', function() {
     it('Should call updatePool', async function() {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
