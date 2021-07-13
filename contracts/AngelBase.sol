@@ -201,11 +201,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         onlyOwner
     {
         _requireMsg(
-            block.timestamp > endTime,
-            "setGraceReward",
-            "last period not finish yet"
-        );
-        _requireMsg(
             _amount > 0,
             "setGraceReward",
             "grace amount should be greater than 0"
@@ -220,10 +215,16 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         for (uint256 i = 0; i < len; ++i) {
             updatePool(i);
         }
+
         uint256 duration = _endTime.sub(block.timestamp);
+        if(block.timestamp >= endTime) {
+            gracePerSecond = _amount / duration;
+        } else {
+            uint256 remaining = endTime.sub(block.timestamp);
+            uint256 leftover = remaining.mul(gracePerSecond);
+            gracePerSecond = leftover.add(_amount) / duration;
+        }
         endTime = _endTime;
-        gracePerSecond = _amount / duration;
-        emit LogGracePerSecond(gracePerSecond);
 
         GRACE.safeTransferFrom(msg.sender, address(this), _amount);
         // TODO: add event?
