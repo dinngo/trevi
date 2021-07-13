@@ -226,7 +226,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         delete _joinedAngels[_msgSender()];
     }
 
-    /// @notice Quit an angel's prgram with emergencyWithdraw
+    /// @notice Quit an angel's program with emergencyWithdraw
     function rageQuitAngel(IAngel angel) external {
         _quitAngel(angel);
         emit RageQuit(_msgSender(), address(angel));
@@ -356,7 +356,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         }
         _requireMsg(
             angels.length != len,
-            "quitAngel",
+            "_quitAngel",
             "Fountain: unjoined angel"
         );
     }
