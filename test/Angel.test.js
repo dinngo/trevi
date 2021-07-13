@@ -61,7 +61,9 @@ contract('Angel', function([_, user, rewarder]) {
     await this.rwdToken.approve(this.angel.address, rewardAmount, {
       from: rewarder,
     });
-    await this.angel.setGraceReward(rewardAmount, this.rewardEndTime, { from: rewarder });
+    await this.angel.setGraceReward(rewardAmount, this.rewardEndTime, {
+      from: rewarder,
+    });
     this.rewarder = await RewarderMock.new(
       ether('1'),
       this.dummy.address,
@@ -152,9 +154,7 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(seconds(86400));
       await this.angel.updatePool(new BN('0'));
       const timestamp2 = await latest();
-      let expectedGrace = this.rewardRate.mul(
-        timestamp2.sub(timestamp)
-      );
+      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expect(pendingGrace).to.be.bignumber.gte(expectedGrace);
     });
@@ -172,9 +172,7 @@ contract('Angel', function([_, user, rewarder]) {
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       await this.angel.updatePool(new BN('0'));
       const timestamp2 = await latest();
-      let expectedGrace = this.rewardRate.mul(
-        timestamp2.sub(timestamp)
-      );
+      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expect(pendingGrace).to.be.bignumber.gte(expectedGrace);
     });
@@ -192,9 +190,7 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(duration.days(10));
       const timestamp2 = this.rewardEndTime;
       await this.angel.updatePool(new BN('0'));
-      let expectedGrace = this.rewardRate.mul(
-        timestamp2.sub(timestamp)
-      );
+      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
     });
@@ -219,7 +215,7 @@ contract('Angel', function([_, user, rewarder]) {
     });
 
     it('When the pool is expired and then re-allocated', async function() {
-      // Allocate and join 
+      // Allocate and join
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
       });
@@ -232,9 +228,7 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(duration.days(10));
       const timestamp2 = this.rewardEndTime;
       await this.angel.updatePool(new BN('0'));
-      let expectedGrace = this.rewardRate.mul(
-        timestamp2.sub(timestamp)
-      );
+      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
       // Re-allocate
       const now = await latest();
       const rewardDuration = duration.days(2);
@@ -244,7 +238,9 @@ contract('Angel', function([_, user, rewarder]) {
       await this.rwdToken.approve(this.angel.address, rewardAmount, {
         from: rewarder,
       });
-      await this.angel.setGraceReward(rewardAmount, rewardEndTimeTemp, { from: rewarder });
+      await this.angel.setGraceReward(rewardAmount, rewardEndTimeTemp, {
+        from: rewarder,
+      });
       const timestampReallocate = await latest();
       await increase(duration.days(1));
       await this.angel.updatePool(new BN('0'));
@@ -253,7 +249,9 @@ contract('Angel', function([_, user, rewarder]) {
         timestamp3.sub(timestampReallocate)
       );
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expect(pendingGrace).to.be.bignumber.eq(expectedGrace.add(expectedGrace2));
+      expect(pendingGrace).to.be.bignumber.eq(
+        expectedGrace.add(expectedGrace2)
+      );
     });
   });
 
@@ -263,7 +261,9 @@ contract('Angel', function([_, user, rewarder]) {
       const rewardDuration = duration.days(2);
       const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
       await expectRevert(
-        this.angel.setGraceReward(ether('1'), rewardEndTimeTemp, {from: rewarder}),
+        this.angel.setGraceReward(ether('1'), rewardEndTimeTemp, {
+          from: rewarder,
+        }),
         'last period not finish yet'
       );
     });
@@ -275,7 +275,9 @@ contract('Angel', function([_, user, rewarder]) {
       const rewardDuration = duration.days(2);
       const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
       await expectRevert(
-        this.angel.setGraceReward(ether('0'), rewardEndTimeTemp, {from: rewarder}),
+        this.angel.setGraceReward(ether('0'), rewardEndTimeTemp, {
+          from: rewarder,
+        }),
         'grace amount should be greater than 0'
       );
     });
@@ -285,12 +287,12 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(duration.days(10));
       const now = await latest();
       await expectRevert(
-        this.angel.setGraceReward(ether('1'), now, {from: rewarder}),
+        this.angel.setGraceReward(ether('1'), now, { from: rewarder }),
         'end time should be in the future'
       );
     });
   });
-  
+
   describe('MassUpdatePools', function() {
     it('Should call updatePool', async function() {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {

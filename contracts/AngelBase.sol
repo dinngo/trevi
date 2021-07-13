@@ -196,10 +196,25 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @notice Sets the amount of GRACE to be distributed and the end time. Can only be called by the owner.
     /// @param _amount The amount of GRACE to be distributed.
     /// @param _endTime UNIX timestamp that indicates the end of the calculating period.
-    function setGraceReward(uint256 _amount, uint256 _endTime) external onlyOwner {
-        _requireMsg(block.timestamp > endTime, "setGraceReward", "last period not finish yet");
-        _requireMsg(_amount > 0, "setGraceReward", "grace amount should be greater than 0");
-        _requireMsg(_endTime > block.timestamp, "setGraceReward", "end time should be in the future");
+    function setGraceReward(uint256 _amount, uint256 _endTime)
+        external
+        onlyOwner
+    {
+        _requireMsg(
+            block.timestamp > endTime,
+            "setGraceReward",
+            "last period not finish yet"
+        );
+        _requireMsg(
+            _amount > 0,
+            "setGraceReward",
+            "grace amount should be greater than 0"
+        );
+        _requireMsg(
+            _endTime > block.timestamp,
+            "setGraceReward",
+            "end time should be in the future"
+        );
         // massUpdatePools
         uint256 len = lpToken.length;
         for (uint256 i = 0; i < len; ++i) {
@@ -209,7 +224,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         endTime = _endTime;
         gracePerSecond = _amount / duration;
         emit LogGracePerSecond(gracePerSecond);
-        
+
         GRACE.safeTransferFrom(msg.sender, address(this), _amount);
         // TODO: add event?
     }
@@ -277,8 +292,11 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
                 IFountain(archangel.getFountain(address(lpToken[pid])));
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
             // Only accumulate reward before end time
-            if (lpSupply > 0 && lastTimeRewardApplicable() > pool.lastRewardTime) {
-                uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
+            if (
+                lpSupply > 0 && lastTimeRewardApplicable() > pool.lastRewardTime
+            ) {
+                uint256 time =
+                    lastTimeRewardApplicable().sub(pool.lastRewardTime);
                 uint256 graceReward =
                     time.mul(gracePerSecond).mul(pool.allocPoint) /
                         totalAllocPoint;
