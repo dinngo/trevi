@@ -193,30 +193,34 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         return Math.min(block.timestamp, endTime);
     }
 
-    /// TODO: Add func description
+    /// @notice Sets the amount of GRACE to be distributed and the end time. Can only be called by the owner.
+    /// @param _amount The amount of GRACE to be distributed.
+    /// @param _endTime UNIX timestamp that indicates the end of the calculating period.
     function setGraceReward(uint256 _amount, uint256 _endTime) external onlyOwner {
-        require(block.timestamp > endTime, "last period not finish yet");
-        // TODO: should check _amount?
-        require(_amount > 0, "grace amount should be greater than 0");
-        require(_endTime > block.timestamp, "end time should be in the future");
+        _requireMsg(block.timestamp > endTime, "setGraceReward", "last period not finish yet");
+        _requireMsg(_amount > 0, "setGraceReward", "grace amount should be greater than 0");
+        _requireMsg(_endTime > block.timestamp, "setGraceReward", "end time should be in the future");
         // massUpdatePools
         uint256 len = lpToken.length;
         for (uint256 i = 0; i < len; ++i) {
             updatePool(i);
         }
         uint256 duration = _endTime.sub(block.timestamp);
-        // TODO: inject perSecond code and delete func?
-        _setGracePerSecond(_amount/duration);
         endTime = _endTime;
+        gracePerSecond = _amount / duration;
+        emit LogGracePerSecond(gracePerSecond);
+        
         GRACE.safeTransferFrom(msg.sender, address(this), _amount);
+        // TODO: add event?
     }
 
+    /// TODO: delete?
     /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
-    function _setGracePerSecond(uint256 _gracePerSecond) internal {
-        gracePerSecond = _gracePerSecond;
-        emit LogGracePerSecond(_gracePerSecond);
-    }
+    // function _setGracePerSecond(uint256 _gracePerSecond) internal {
+    //     gracePerSecond = _gracePerSecond;
+    //     emit LogGracePerSecond(_gracePerSecond);
+    // }
 
     /// @notice View function to see pending GRACE on frontend.
     /// @param _pid The index of the pool. See `poolInfo`.
@@ -236,7 +240,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IFountain fountain =
             IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
-        if (lastTimeRewardApplicable() > pool.lastRewardTime && lpSupply != 0) {
+        if (lpSupply != 0 && lastTimeRewardApplicable() > pool.lastRewardTime) {
             uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
             uint256 graceReward =
                 time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
