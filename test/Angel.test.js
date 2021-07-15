@@ -192,7 +192,7 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angel.updatePool(new BN('0'));
       let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
+      expectEqWithinBps(pendingGrace, expectedGrace);
     });
 
     it('When the pool is expired', async function() {
@@ -214,125 +214,337 @@ contract('Angel', function([_, user, rewarder]) {
       expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
     });
 
-    it('When the pool is expired and then re-allocated', async function() {
-      // Allocate and join
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
+    describe('Reallocate by setGraceReward', function() {
+      it('Reallocate after expired', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(10));
+        const timestamp2 = this.rewardEndTime;
+        await this.angel.updatePool(new BN('0'));
+        let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+        // Re-allocate
+        const now = await latest();
+        const rewardDuration = duration.days(2);
+        const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+        const newRewardRate = ether('0.02');
+        const rewardAmount = newRewardRate.mul(rewardDuration);
+        await this.rwdToken.approve(this.angel.address, rewardAmount, {
+          from: rewarder,
+        });
+        await this.angel.setGraceReward(rewardAmount, rewardEndTimeTemp, {
+          from: rewarder,
+        });
+        const timestampReallocate = await latest();
+        await increase(duration.days(1));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
+
+      it('Reallocate before expired and set later end time', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(1));
+        // Re-allocate
+        const now = await latest();
+        const rewardDuration = duration.days(2);
+        const rewardEndTimeReallocate = new BN(now).add(new BN(rewardDuration));
+        const rewardAmountReallocate = ether('5000');
+        await this.rwdToken.approve(
+          this.angel.address,
+          rewardAmountReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        await this.angel.setGraceReward(
+          rewardAmountReallocate,
+          rewardEndTimeReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        const timestampReallocate = await latest();
+        await increase(duration.days(1));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        // Calculate rewards from deposit to reallocate
+        let expectedGrace = this.rewardRate.mul(
+          timestampReallocate.sub(timestamp)
+        );
+        // Calculate rewards from reallocate to latest
+        const newRewardRate = this.rewardEndTime
+          .sub(timestampReallocate)
+          .mul(this.rewardRate)
+          .add(rewardAmountReallocate)
+          .div(rewardDuration);
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
-      const timestamp = await latest();
-      await increase(duration.days(10));
-      const timestamp2 = this.rewardEndTime;
-      await this.angel.updatePool(new BN('0'));
-      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
-      // Re-allocate
-      const now = await latest();
-      const rewardDuration = duration.days(2);
-      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
-      const newRewardRate = ether('0.02');
-      const rewardAmount = newRewardRate.mul(rewardDuration);
-      await this.rwdToken.approve(this.angel.address, rewardAmount, {
-        from: rewarder,
+
+      it('Reallocate before expired and set earlier end time', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(1));
+        // Re-allocate
+        const reducedDuration = duration.hours(3);
+        const rewardEndTimeReallocate = this.rewardEndTime.sub(
+          new BN(reducedDuration)
+        );
+        const rewardAmountReallocate = ether('5000');
+        await this.rwdToken.approve(
+          this.angel.address,
+          rewardAmountReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        await this.angel.setGraceReward(
+          rewardAmountReallocate,
+          rewardEndTimeReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        const timestampReallocate = await latest();
+        await increase(duration.hours(1));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        // Calculate rewards from deposit to reallocate
+        let expectedGrace = this.rewardRate.mul(
+          timestampReallocate.sub(timestamp)
+        );
+        // Calculate rewards from reallocate to latest
+        // = leftoverReward + newReward / newDuration
+        const newRewardRate = this.rewardRate
+          .mul(this.rewardEndTime.sub(timestampReallocate))
+          .add(rewardAmountReallocate)
+          .div(rewardEndTimeReallocate.sub(timestampReallocate));
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.angel.setGraceReward(rewardAmount, rewardEndTimeTemp, {
-        from: rewarder,
-      });
-      const timestampReallocate = await latest();
-      await increase(duration.days(1));
-      await this.angel.updatePool(new BN('0'));
-      const timestamp3 = await latest();
-      let expectedGrace2 = newRewardRate.mul(
-        timestamp3.sub(timestampReallocate)
-      );
-      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
     });
 
-    it('Reallocate before expired and set later end time', async function() {
-      // Allocate and join
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
+    describe('Reallocate by setGracePerSecond', function() {
+      it('Reallocate after expired', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(10));
+        const timestamp2 = this.rewardEndTime;
+        await this.angel.updatePool(new BN('0'));
+        let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+        // Re-allocate
+        const now = await latest();
+        const rewardDuration = duration.days(2);
+        const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+        const newRewardRate = ether('0.02');
+        const rewardAmount = newRewardRate.mul(rewardDuration);
+        await this.rwdToken.approve(this.angel.address, rewardAmount, {
+          from: rewarder,
+        });
+        await this.angel.setGracePerSecond(newRewardRate, rewardEndTimeTemp, {
+          from: rewarder,
+        });
+        const timestampReallocate = await latest();
+        await increase(duration.days(1));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
-      });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
-      const timestamp = await latest();
-      await increase(duration.days(1));
-      // Re-allocate
-      const now = await latest();
-      const rewardDuration = duration.days(2);
-      const rewardEndTimeReallocate = new BN(now).add(new BN(rewardDuration));
-      const rewardAmountReallocate = ether('5000');
-      await this.rwdToken.approve(this.angel.address, rewardAmountReallocate, {
-        from: rewarder,
-      });
-      await this.angel.setGraceReward(rewardAmountReallocate, rewardEndTimeReallocate, {
-        from: rewarder,
-      });
-      const timestampReallocate = await latest();
-      await increase(duration.days(1));
-      await this.angel.updatePool(new BN('0'));
-      const timestamp3 = await latest();
-      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      // Calculate rewards from deposit to reallocate
-      let expectedGrace = this.rewardRate.mul(timestampReallocate.sub(timestamp));
-      // Calculate rewards from reallocate to latest
-      const newRewardRate = this.rewardEndTime.sub(timestampReallocate).mul(this.rewardRate).add(rewardAmountReallocate).div(rewardDuration);
-      let expectedGrace2 = newRewardRate.mul(
-        timestamp3.sub(timestampReallocate)
-      );
-      expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
-    });
 
-    it('Reallocate before expired and set earlier end time', async function() {
-      // Allocate and join
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
+      it('Reallocate before expired with shortage', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(1));
+        // Re-allocate
+        const now = await latest();
+        const rewardDuration = duration.days(2);
+        const rewardEndTimeReallocate = new BN(now).add(new BN(rewardDuration));
+        const newRewardRate = ether('1'); // 100x
+        // shortage = rewardNeeded - leftover
+        const rewardShortage = newRewardRate
+          .mul(rewardDuration)
+          .sub(this.rewardEndTime.sub(now).mul(this.rewardRate));
+        await this.rwdToken.approve(this.angel.address, rewardShortage, {
+          from: rewarder,
+        });
+        await this.angel.setGracePerSecond(
+          newRewardRate,
+          rewardEndTimeReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        const timestampReallocate = await latest();
+        await increase(duration.days(1));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        // Calculate rewards from deposit to reallocate
+        let expectedGrace = this.rewardRate.mul(
+          timestampReallocate.sub(timestamp)
+        );
+        // Calculate rewards from reallocate to latest
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
+
+      it('Reallocate before expired without shortage', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(1));
+        // Re-allocate
+        const rewardEndTimeReallocate = this.rewardEndTime; // same endTime
+        const newRewardRate = ether('0.001'); // 1/10x
+        // No shortage and just set
+        await this.angel.setGracePerSecond(
+          newRewardRate,
+          rewardEndTimeReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        const timestampReallocate = await latest();
+        await increase(duration.hours(10));
+        await this.angel.updatePool(new BN('0'));
+        const timestamp3 = await latest();
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        // Calculate rewards from deposit to reallocate
+        let expectedGrace = this.rewardRate.mul(
+          timestampReallocate.sub(timestamp)
+        );
+        // Calculate rewards from reallocate to latest
+        let expectedGrace2 = newRewardRate.mul(
+          timestamp3.sub(timestampReallocate)
+        );
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
-      const timestamp = await latest();
-      await increase(duration.days(1));
-      // Re-allocate
-      const reducedDuration = duration.hours(3);
-      const rewardEndTimeReallocate = this.rewardEndTime.sub(new BN(reducedDuration));
-      const rewardAmountReallocate = ether('5000');
-      await this.rwdToken.approve(this.angel.address, rewardAmountReallocate, {
-        from: rewarder,
+
+      it('Set GracePerSecond to 0', async function() {
+        // Allocate and join
+        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+          from: rewarder,
+        });
+        await this.stkToken.approve(this.fountain.address, ether('10'), {
+          from: user,
+        });
+        await this.fountain.joinAngel(this.angel.address, { from: user });
+        await this.fountain.deposit(ether('1'), { from: user });
+        const timestamp = await latest();
+        await increase(duration.days(1));
+        // Re-allocate
+        const rewardEndTimeReallocate = this.rewardEndTime; // same endTime
+        const newRewardRate = ether('0');
+        // No shortage and just set
+        await this.angel.setGracePerSecond(
+          newRewardRate,
+          rewardEndTimeReallocate,
+          {
+            from: rewarder,
+          }
+        );
+        const timestampReallocate = await latest();
+        await increase(duration.hours(10));
+        await this.angel.updatePool(new BN('0'));
+        let pendingGrace = await this.angel.pendingGrace.call(
+          new BN('0'),
+          user
+        );
+        // Calculate rewards from deposit to reallocate
+        let expectedGrace = this.rewardRate.mul(
+          timestampReallocate.sub(timestamp)
+        );
+        // Calculate rewards from reallocate to latest
+        let expectedGrace2 = ether('0');
+        expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
       });
-      await this.angel.setGraceReward(rewardAmountReallocate, rewardEndTimeReallocate, {
-        from: rewarder,
-      });
-      const timestampReallocate = await latest();
-      await increase(duration.hours(1));
-      await this.angel.updatePool(new BN('0'));
-      const timestamp3 = await latest();
-      let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      // Calculate rewards from deposit to reallocate
-      let expectedGrace = this.rewardRate.mul(timestampReallocate.sub(timestamp));
-      // Calculate rewards from reallocate to latest
-      // = leftoverReward + newReward / newDuration
-      const newRewardRate = this.rewardEndTime.sub(timestampReallocate).mul(this.rewardRate).add(rewardAmountReallocate).div(rewardEndTimeReallocate.sub(timestampReallocate));
-      let expectedGrace2 = newRewardRate.mul(
-        timestamp3.sub(timestampReallocate)
-      );
-      expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
     });
   });
 
   describe('SetGraceReward', function() {
     it('Allocate zero amount', async function() {
-      // Forward to after the expiration first
-      await increase(duration.days(10));
       const now = await latest();
       const rewardDuration = duration.days(2);
       const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
@@ -345,12 +557,56 @@ contract('Angel', function([_, user, rewarder]) {
     });
 
     it('End time not later than now', async function() {
-      // Forward to after the expiration first
-      await increase(duration.days(10));
       const now = await latest();
       await expectRevert(
         this.angel.setGraceReward(ether('1'), now, { from: rewarder }),
         'end time should be in the future'
+      );
+    });
+
+    it('Not owner', async function() {
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGraceReward(ether('1'), rewardEndTimeTemp, {
+          from: user,
+        }),
+        'Ownable: caller is not the owner'
+      );
+    });
+  });
+
+  describe('SetGracePerSecond', function() {
+    it('Shortage not provide', async function() {
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGracePerSecond(ether('10'), rewardEndTimeTemp, {
+          from: rewarder,
+        }),
+        'TransferFrom failed'
+      );
+    });
+
+    it('End time not later than now', async function() {
+      const now = await latest();
+      await expectRevert(
+        this.angel.setGraceReward(ether('1'), now, { from: rewarder }),
+        'end time should be in the future'
+      );
+    });
+
+    it('Not owner', async function() {
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGracePerSecond(ether('1'), rewardEndTimeTemp, {
+          from: user,
+        }),
+        'Ownable: caller is not the owner'
       );
     });
   });

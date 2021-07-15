@@ -210,33 +210,54 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             "setGraceReward",
             "end time should be in the future"
         );
-        // massUpdatePools
-        uint256 len = lpToken.length;
-        for (uint256 i = 0; i < len; ++i) {
-            updatePool(i);
-        }
+        massUpdatePools();
 
         uint256 duration = _endTime.sub(block.timestamp);
-        if(block.timestamp >= endTime) {
+        if (block.timestamp >= endTime) {
             gracePerSecond = _amount / duration;
         } else {
             uint256 remaining = endTime.sub(block.timestamp);
             uint256 leftover = remaining.mul(gracePerSecond);
             gracePerSecond = leftover.add(_amount) / duration;
         }
+        emit LogGracePerSecond(gracePerSecond);
         endTime = _endTime;
 
         GRACE.safeTransferFrom(msg.sender, address(this), _amount);
         // TODO: add event?
     }
 
-    /// TODO: delete?
     /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
-    // function _setGracePerSecond(uint256 _gracePerSecond) internal {
-    //     gracePerSecond = _gracePerSecond;
-    //     emit LogGracePerSecond(_gracePerSecond);
-    // }
+    function setGracePerSecond(uint256 _gracePerSecond, uint256 _endTime)
+        external
+        onlyOwner
+    {
+        _requireMsg(
+            _endTime > block.timestamp,
+            "setGracePerSecond",
+            "end time should be in the future"
+        );
+        massUpdatePools();
+
+        uint256 duration = _endTime.sub(block.timestamp);
+        uint256 rewardNeeded = _gracePerSecond.mul(duration);
+        uint256 shortage = 0;
+        if (block.timestamp >= endTime) {
+            shortage = rewardNeeded;
+        } else {
+            uint256 remaining = endTime.sub(block.timestamp);
+            uint256 leftover = remaining.mul(gracePerSecond);
+            if (rewardNeeded > leftover) shortage = rewardNeeded.sub(leftover);
+        }
+        endTime = _endTime;
+        gracePerSecond = _gracePerSecond;
+        emit LogGracePerSecond(_gracePerSecond);
+
+        if (shortage > 0)
+            GRACE.safeTransferFrom(msg.sender, address(this), shortage);
+        // TODO: add event?
+    }
 
     /// @notice View function to see pending GRACE on frontend.
     /// @param _pid The index of the pool. See `poolInfo`.
@@ -269,6 +290,14 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         )
             .sub(user.rewardDebt)
             .toUInt256();
+    }
+
+    /// @notice Update reward variables for all pools. Be careful of gas spending!
+    function massUpdatePools() public {
+        uint256 len = lpToken.length;
+        for (uint256 i = 0; i < len; ++i) {
+            updatePool(i);
+        }
     }
 
     /// @notice Update reward variables for all pools. Be careful of gas spending!
