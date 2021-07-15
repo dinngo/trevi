@@ -113,7 +113,11 @@ abstract contract JoinPermit is FountainBase {
     /// @notice User may join angel for permitted user.
     /// @param angel The angel address.
     /// @param user The user address.
-    function joinAngelFor(IAngel angel, address user) public canJoinFor(user) {
+    function joinAngelFor(IAngel angel, address user)
+        public
+        canJoinFor(user)
+        nonReentrant
+    {
         _joinAngel(angel, user);
     }
 
@@ -123,6 +127,7 @@ abstract contract JoinPermit is FountainBase {
     function joinAngelsFor(IAngel[] memory angels, address user)
         public
         canJoinFor(user)
+        nonReentrant
     {
         for (uint256 i = 0; i < angels.length; i++) {
             _joinAngel(angels[i], user);

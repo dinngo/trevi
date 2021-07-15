@@ -118,7 +118,7 @@ abstract contract HarvestPermit is FountainBase {
         IAngel angel,
         address from,
         address to
-    ) public canHarvestFrom(from) {
+    ) public canHarvestFrom(from) nonReentrant {
         _harvestAngel(angel, from, to);
         emit Harvest(from);
     }
@@ -129,6 +129,7 @@ abstract contract HarvestPermit is FountainBase {
     function harvestAllFrom(address from, address to)
         public
         canHarvestFrom(from)
+        nonReentrant
     {
         IAngel[] memory angels = joinedAngel(from);
         for (uint256 i = 0; i < angels.length; i++) {
