@@ -55,13 +55,13 @@ contract('Angel', function([_, user, rewarder]) {
     // Make gracePerSecond equals to the given rewardRate
     const now = await latest();
     const rewardDuration = duration.days(2);
-    this.rewardEndTime = new BN(now).add(new BN(rewardDuration));
-    this.rewardRate = ether('0.01');
-    const rewardAmount = this.rewardRate.mul(rewardDuration);
+    this.rewardEndTimeInit = new BN(now).add(new BN(rewardDuration));
+    this.rewardRateInit = ether('0.01');
+    const rewardAmount = this.rewardRateInit.mul(rewardDuration);
     await this.rwdToken.approve(this.angel.address, rewardAmount, {
       from: rewarder,
     });
-    await this.angel.addGraceReward(rewardAmount, this.rewardEndTime, {
+    await this.angel.addGraceReward(rewardAmount, this.rewardEndTimeInit, {
       from: rewarder,
     });
     this.rewarder = await RewarderMock.new(
@@ -175,7 +175,7 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(seconds(86400));
       await this.angel.updatePool(new BN('0'));
       const timestamp2 = await latest();
-      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+      let expectedGrace = this.rewardRateInit.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expectEqWithinBps(pendingGrace, expectedGrace);
     });
@@ -193,7 +193,7 @@ contract('Angel', function([_, user, rewarder]) {
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       await this.angel.updatePool(new BN('0'));
       const timestamp2 = await latest();
-      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+      let expectedGrace = this.rewardRateInit.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expectEqWithinBps(pendingGrace, expectedGrace);
     });
@@ -209,9 +209,9 @@ contract('Angel', function([_, user, rewarder]) {
       await this.fountain.deposit(ether('1'), { from: user });
       const timestamp = await latest();
       await increase(duration.days(10));
-      const timestamp2 = this.rewardEndTime;
+      const timestamp2 = this.rewardEndTimeInit;
       await this.angel.updatePool(new BN('0'));
-      let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+      let expectedGrace = this.rewardRateInit.mul(timestamp2.sub(timestamp));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
       expectEqWithinBps(pendingGrace, expectedGrace);
     });
@@ -245,9 +245,9 @@ contract('Angel', function([_, user, rewarder]) {
         await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(10));
-        const timestamp2 = this.rewardEndTime;
+        const timestamp2 = this.rewardEndTimeInit;
         await this.angel.updatePool(new BN('0'));
-        let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+        let expectedGrace = this.rewardRateInit.mul(timestamp2.sub(timestamp));
         // Re-allocate
         const now = await latest();
         const rewardDuration = duration.days(2);
@@ -318,13 +318,13 @@ contract('Angel', function([_, user, rewarder]) {
           user
         );
         // Calculate rewards from deposit to reallocate
-        let expectedGrace = this.rewardRate.mul(
+        let expectedGrace = this.rewardRateInit.mul(
           timestampReallocate.sub(timestamp)
         );
         // Calculate rewards from reallocate to latest
         // newRewardRate = (leftoverReward + newReward) / newDuration
-        const newRewardRate = this.rewardRate
-          .mul(this.rewardEndTime.sub(timestampReallocate))
+        const newRewardRate = this.rewardRateInit
+          .mul(this.rewardEndTimeInit.sub(timestampReallocate))
           .add(rewardAmountReallocate)
           .div(rewardDuration);
         let expectedGrace2 = newRewardRate.mul(
@@ -351,7 +351,7 @@ contract('Angel', function([_, user, rewarder]) {
         await increase(duration.days(1));
         // Re-allocate
         const reducedDuration = duration.hours(3);
-        const rewardEndTimeReallocate = this.rewardEndTime.sub(
+        const rewardEndTimeReallocate = this.rewardEndTimeInit.sub(
           new BN(reducedDuration)
         );
         const rewardAmountReallocate = ether('5000');
@@ -378,13 +378,13 @@ contract('Angel', function([_, user, rewarder]) {
           user
         );
         // Calculate rewards from deposit to reallocate
-        let expectedGrace = this.rewardRate.mul(
+        let expectedGrace = this.rewardRateInit.mul(
           timestampReallocate.sub(timestamp)
         );
         // Calculate rewards from reallocate to latest
         // newRewardRate = (leftoverReward + newReward) / newDuration
-        const newRewardRate = this.rewardRate
-          .mul(this.rewardEndTime.sub(timestampReallocate))
+        const newRewardRate = this.rewardRateInit
+          .mul(this.rewardEndTimeInit.sub(timestampReallocate))
           .add(rewardAmountReallocate)
           .div(rewardEndTimeReallocate.sub(timestampReallocate));
         let expectedGrace2 = newRewardRate.mul(
@@ -411,9 +411,9 @@ contract('Angel', function([_, user, rewarder]) {
         await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(10));
-        const timestamp2 = this.rewardEndTime;
+        const timestamp2 = this.rewardEndTimeInit;
         await this.angel.updatePool(new BN('0'));
-        let expectedGrace = this.rewardRate.mul(timestamp2.sub(timestamp));
+        let expectedGrace = this.rewardRateInit.mul(timestamp2.sub(timestamp));
         // Re-allocate
         const now = await latest();
         const rewardDuration = duration.days(2);
@@ -463,7 +463,7 @@ contract('Angel', function([_, user, rewarder]) {
         // shortage = rewardNeeded - leftover
         const rewardShortage = newRewardRate
           .mul(rewardDuration)
-          .sub(this.rewardEndTime.sub(now).mul(this.rewardRate));
+          .sub(this.rewardEndTimeInit.sub(now).mul(this.rewardRateInit));
         await this.rwdToken.approve(this.angel.address, rewardShortage, {
           from: rewarder,
         });
@@ -483,7 +483,7 @@ contract('Angel', function([_, user, rewarder]) {
           user
         );
         // Calculate rewards from deposit to reallocate
-        let expectedGrace = this.rewardRate.mul(
+        let expectedGrace = this.rewardRateInit.mul(
           timestampReallocate.sub(timestamp)
         );
         // Calculate rewards from reallocate to latest
@@ -509,7 +509,7 @@ contract('Angel', function([_, user, rewarder]) {
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
-        const rewardEndTimeReallocate = this.rewardEndTime; // same endTime
+        const rewardEndTimeReallocate = this.rewardEndTimeInit; // same endTime
         const newRewardRate = ether('0.001'); // 1/10x
         // No shortage and just set
         await this.angel.setGracePerSecond(
@@ -528,7 +528,7 @@ contract('Angel', function([_, user, rewarder]) {
           user
         );
         // Calculate rewards from deposit to reallocate
-        let expectedGrace = this.rewardRate.mul(
+        let expectedGrace = this.rewardRateInit.mul(
           timestampReallocate.sub(timestamp)
         );
         // Calculate rewards from reallocate to latest
@@ -554,7 +554,7 @@ contract('Angel', function([_, user, rewarder]) {
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
-        const rewardEndTimeReallocate = this.rewardEndTime; // same endTime
+        const rewardEndTimeReallocate = this.rewardEndTimeInit; // same endTime
         const newRewardRate = ether('0');
         // No shortage and just set
         await this.angel.setGracePerSecond(
@@ -572,7 +572,7 @@ contract('Angel', function([_, user, rewarder]) {
           user
         );
         // Calculate rewards from deposit to reallocate
-        let expectedGrace = this.rewardRate.mul(
+        let expectedGrace = this.rewardRateInit.mul(
           timestampReallocate.sub(timestamp)
         );
         // Calculate rewards from reallocate to latest
