@@ -428,13 +428,16 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('normal', async function() {
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAngel(this.angel1.address, {
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
       });
 
       it('rage quit', async function() {
@@ -451,13 +454,16 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           'bad rewarder'
         );
         // user rage quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.rageQuitAngel(this.angel1.address, {
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'RageQuit', {
           user: user,
           angel: this.angel1.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
       });
 
       it('all', async function() {
@@ -475,9 +481,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAllAngel({
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
@@ -486,6 +494,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           user: user,
           angel: this.angel2.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-2);
       });
 
       it('unjoined angel', async function() {
