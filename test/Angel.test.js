@@ -59,7 +59,8 @@ contract('Angel', function([_, user, rewarder]) {
     this.rewarder = await RewarderMock.new(
       ether('1'),
       this.dummy.address,
-      this.angel.address
+      this.angel.address,
+      new BN('0')
     );
   });
 

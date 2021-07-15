@@ -26,7 +26,6 @@ const Fountain = artifacts.require('Fountain');
 const FountainFactory = artifacts.require('FountainFactory');
 const SimpleToken = artifacts.require('SimpleToken');
 const Rewarder = artifacts.require('RewarderMock');
-const BrokenRewarder = artifacts.require('BrokenRewarderMock');
 const FlashBorrower = artifacts.require('FlashBorrower');
 
 const Permit = [
@@ -143,13 +142,22 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       this.rewarder = await Rewarder.new(
         ether('1'),
         this.rwdToken2.address,
-        this.angel1.address
+        this.angel1.address,
+        new BN('0')
       );
       // Get Bad Rewarder
-      this.badRewarder = await BrokenRewarder.new(
+      this.badRewarder = await Rewarder.new(
         ether('1'),
         this.rwdToken2.address,
-        this.angel1.address
+        this.angel1.address,
+        new BN('1')
+      );
+      // Get Gas Monster Rewarder
+      this.gasRewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address,
+        new BN('2')
       );
     });
 
@@ -1081,7 +1089,10 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         await this.fountain.deposit(depositAmount, { from: user });
-        // Set to bad rewarder after deposit
+      });
+
+      it('reverting rewarder', async function() {
+        // Set to bad rewarder
         await this.angel1.set(
           new BN('0'),
           new BN('1000'),
@@ -1094,14 +1105,45 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           'bad rewarder'
         );
         await increase(seconds(300));
-      });
-
-      it('normal', async function() {
         // check joined angel user balance
         const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user emergency withdraw
         const receipt = await this.fountain.emergencyWithdraw({ from: user });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
+        // check joined angel user balance
+        const info1 = await this.angel1.userInfo.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
+        // check user staking token and reward token amount
+        expect(info1[0]).to.be.bignumber.eq(ether('0'));
+        expect(pending).to.be.bignumber.eq(ether('0'));
+        expect(await this.rwdToken1.balanceOf.call(user)).to.be.bignumber.eq(
+          ether('0')
+        );
+      });
+
+      it('gas monster rewarder', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.gasRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'revert'
+        );
+
+        await increase(seconds(300));
+        // check joined angel user balance
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
+        // user emergency withdraw
+        const receipt = await this.fountain.emergencyWithdraw({ from: user });
+        expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
+        expect(new BN(receipt.receipt.gasUsed)).to.be.bignumber.lt(
+          new BN('1500000')
+        );
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
         const pending = await this.angel1.pendingGrace.call(pid, user);

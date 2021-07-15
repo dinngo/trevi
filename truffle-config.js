@@ -41,7 +41,7 @@ module.exports = {
       port: 8545,
       network_id: '*',
       gasPrice: 0x01,
-      gas: 10000000,
+      gas: 15000000,
       networkCheckTimeout: 10000,
     },
   },
