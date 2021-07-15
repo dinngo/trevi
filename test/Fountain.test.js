@@ -142,7 +142,22 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       this.rewarder = await Rewarder.new(
         ether('1'),
         this.rwdToken2.address,
-        this.angel1.address
+        this.angel1.address,
+        new BN('0')
+      );
+      // Get Bad Rewarder
+      this.badRewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address,
+        new BN('1')
+      );
+      // Get Gas Monster Rewarder
+      this.gasRewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address,
+        new BN('2')
       );
     });
 
@@ -421,13 +436,42 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('normal', async function() {
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAngel(this.angel1.address, {
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
+      });
+
+      it('rage quit', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.quitAngel(this.angel1.address, { from: user }),
+          'bad rewarder'
+        );
+        // user rage quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
+        const receipt = await this.fountain.rageQuitAngel(this.angel1.address, {
+          from: user,
+        });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
+        expectEvent(receipt, 'RageQuit', {
+          user: user,
+          angel: this.angel1.address,
+        });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
       });
 
       it('all', async function() {
@@ -445,9 +489,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAllAngel({
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
@@ -456,6 +502,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           user: user,
           angel: this.angel2.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-2);
       });
 
       it('unjoined angel', async function() {
@@ -1032,7 +1079,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         await this.angel1.add(
           new BN('1000'),
           this.stkToken.address,
-          ZERO_ADDRESS,
+          this.rewarder.address,
           { from: rewarder }
         );
         // join angel
@@ -1042,15 +1089,61 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         await this.fountain.deposit(depositAmount, { from: user });
-        await increase(seconds(300));
       });
 
-      it('normal', async function() {
+      it('reverting rewarder', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'bad rewarder'
+        );
+        await increase(seconds(300));
         // check joined angel user balance
         const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user emergency withdraw
         const receipt = await this.fountain.emergencyWithdraw({ from: user });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
+        // check joined angel user balance
+        const info1 = await this.angel1.userInfo.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
+        // check user staking token and reward token amount
+        expect(info1[0]).to.be.bignumber.eq(ether('0'));
+        expect(pending).to.be.bignumber.eq(ether('0'));
+        expect(await this.rwdToken1.balanceOf.call(user)).to.be.bignumber.eq(
+          ether('0')
+        );
+      });
+
+      it('gas monster rewarder', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.gasRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'revert'
+        );
+
+        await increase(seconds(300));
+        // check joined angel user balance
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
+        // user emergency withdraw
+        const receipt = await this.fountain.emergencyWithdraw({ from: user });
+        expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
+        expect(new BN(receipt.receipt.gasUsed)).to.be.bignumber.lt(
+          new BN('1500000')
+        );
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
         const pending = await this.angel1.pendingGrace.call(pid, user);

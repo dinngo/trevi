@@ -39,6 +39,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
 
     event Join(address user, address angel);
     event Quit(address user, address angel);
+    event RageQuit(address user, address angel);
     event Deposit(address indexed user, uint256 amount, address indexed to);
     event Withdraw(address indexed user, uint256 amount, address indexed to);
     event EmergencyWithdraw(
@@ -206,25 +207,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice Quit the given angel's program.
     /// @param angel The angel to be quited.
     function quitAngel(IAngel angel) external {
-        IAngel[] storage angels = _joinedAngels[_msgSender()];
-        uint256 len = angels.length;
-        if (angels[len - 1] == angel) {
-            angels.pop();
-        } else {
-            for (uint256 i = 0; i < len - 1; i++) {
-                if (angels[i] == angel) {
-                    angels[i] = angels[len - 1];
-                    angels.pop();
-                    break;
-                }
-            }
-        }
-        _requireMsg(
-            angels.length != len,
-            "quitAngel",
-            "Fountain: unjoined angel"
-        );
-
+        _quitAngel(angel);
         emit Quit(_msgSender(), address(angel));
 
         // Update user info at angel
@@ -241,6 +224,15 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
             _withdrawAngel(_msgSender(), angel, balanceOf(_msgSender()));
         }
         delete _joinedAngels[_msgSender()];
+    }
+
+    /// @notice Quit an angel's program with emergencyWithdraw
+    function rageQuitAngel(IAngel angel) external {
+        _quitAngel(angel);
+        emit RageQuit(_msgSender(), address(angel));
+
+        // Update user info at angel
+        _emergencyWithdrawAngel(_msgSender(), angel);
     }
 
     /// @notice Withdraw for the sender and deposit for the receiver
@@ -346,5 +338,26 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
 
         // Update user info at angel
         _depositAngel(user, angel, balanceOf(user));
+    }
+
+    function _quitAngel(IAngel angel) internal {
+        IAngel[] storage angels = _joinedAngels[_msgSender()];
+        uint256 len = angels.length;
+        if (angels[len - 1] == angel) {
+            angels.pop();
+        } else {
+            for (uint256 i = 0; i < len - 1; i++) {
+                if (angels[i] == angel) {
+                    angels[i] = angels[len - 1];
+                    angels.pop();
+                    break;
+                }
+            }
+        }
+        _requireMsg(
+            angels.length != len,
+            "_quitAngel",
+            "Fountain: unjoined angel"
+        );
     }
 }

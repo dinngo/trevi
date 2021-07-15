@@ -29,6 +29,7 @@ interface IFountain is IERC20, IERC20Permit {
     function joinAngel(address angel) external;
     function joinAngels(address[] calldata angels) external;
     function quitAngel(address angel) external;
+    function rageQuitAngel(address angel) external;
     function quitAllAngel() external;
     function transferFromWithPermit(address owner,
         address recipient,
