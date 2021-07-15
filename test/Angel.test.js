@@ -135,6 +135,27 @@ contract('Angel', function([_, user, rewarder]) {
         'invalid opcode'
       );
     });
+
+    it('Not owner', async function() {
+      await this.angel.add(
+        new BN('10'),
+        this.stkToken.address,
+        this.rewarder.address,
+        { from: rewarder }
+      );
+      await expectRevert(
+        this.angel.set(
+          new BN('0'),
+          new BN('10'),
+          this.rewarder.address,
+          false,
+          {
+            from: user,
+          }
+        ),
+        'Ownable: caller is not the owner'
+      );
+    });
   });
 
   describe('PendingGrace', function() {
@@ -651,6 +672,20 @@ contract('Angel', function([_, user, rewarder]) {
       );
     });
 
+    it('Not owner', async function() {
+      await expectRevert(
+        this.angel.add(
+          new BN('10'),
+          this.stkToken.address,
+          this.rewarder.address,
+          {
+            from: user,
+          }
+        ),
+        'Ownable: caller is not the owner'
+      );
+    });
+
     it('Should revert when adding repeat lp token', async function() {
       await this.angel.add(
         new BN('10'),
@@ -779,7 +814,7 @@ contract('Angel', function([_, user, rewarder]) {
     });
   });
 
-  describe('Fridge only functions', function() {
+  describe('Fountain only functions', function() {
     beforeEach(async function() {
       await this.angel.add(
         new BN('10'),

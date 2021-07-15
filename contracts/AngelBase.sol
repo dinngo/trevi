@@ -177,7 +177,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         bool overwrite
     ) external onlyOwner {
         massUpdatePools();
-        
+
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
