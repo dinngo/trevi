@@ -61,7 +61,7 @@ contract('Angel', function([_, user, rewarder]) {
     await this.rwdToken.approve(this.angel.address, rewardAmount, {
       from: rewarder,
     });
-    await this.angel.setGraceReward(rewardAmount, this.rewardEndTime, {
+    await this.angel.addGraceReward(rewardAmount, this.rewardEndTime, {
       from: rewarder,
     });
     this.rewarder = await RewarderMock.new(
@@ -214,7 +214,7 @@ contract('Angel', function([_, user, rewarder]) {
       expect(pendingGrace).to.be.bignumber.eq(expectedGrace);
     });
 
-    describe('Reallocate by setGraceReward', function() {
+    describe('Reallocate by addGraceReward', function() {
       it('Reallocate after expired', async function() {
         // Allocate and join
         await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
@@ -239,7 +239,7 @@ contract('Angel', function([_, user, rewarder]) {
         await this.rwdToken.approve(this.angel.address, rewardAmount, {
           from: rewarder,
         });
-        await this.angel.setGraceReward(rewardAmount, rewardEndTimeTemp, {
+        await this.angel.addGraceReward(rewardAmount, rewardEndTimeTemp, {
           from: rewarder,
         });
         const timestampReallocate = await latest();
@@ -280,7 +280,7 @@ contract('Angel', function([_, user, rewarder]) {
             from: rewarder,
           }
         );
-        await this.angel.setGraceReward(
+        await this.angel.addGraceReward(
           rewardAmountReallocate,
           rewardEndTimeReallocate,
           {
@@ -336,7 +336,7 @@ contract('Angel', function([_, user, rewarder]) {
             from: rewarder,
           }
         );
-        await this.angel.setGraceReward(
+        await this.angel.addGraceReward(
           rewardAmountReallocate,
           rewardEndTimeReallocate,
           {
@@ -543,13 +543,13 @@ contract('Angel', function([_, user, rewarder]) {
     });
   });
 
-  describe('SetGraceReward', function() {
+  describe('AddGraceReward', function() {
     it('Allocate zero amount', async function() {
       const now = await latest();
       const rewardDuration = duration.days(2);
       const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
       await expectRevert(
-        this.angel.setGraceReward(ether('0'), rewardEndTimeTemp, {
+        this.angel.addGraceReward(ether('0'), rewardEndTimeTemp, {
           from: rewarder,
         }),
         'grace amount should be greater than 0'
@@ -559,7 +559,7 @@ contract('Angel', function([_, user, rewarder]) {
     it('End time not later than now', async function() {
       const now = await latest();
       await expectRevert(
-        this.angel.setGraceReward(ether('1'), now, { from: rewarder }),
+        this.angel.addGraceReward(ether('1'), now, { from: rewarder }),
         'end time should be in the future'
       );
     });
@@ -569,7 +569,7 @@ contract('Angel', function([_, user, rewarder]) {
       const rewardDuration = duration.days(2);
       const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
       await expectRevert(
-        this.angel.setGraceReward(ether('1'), rewardEndTimeTemp, {
+        this.angel.addGraceReward(ether('1'), rewardEndTimeTemp, {
           from: user,
         }),
         'Ownable: caller is not the owner'
@@ -593,7 +593,7 @@ contract('Angel', function([_, user, rewarder]) {
     it('End time not later than now', async function() {
       const now = await latest();
       await expectRevert(
-        this.angel.setGraceReward(ether('1'), now, { from: rewarder }),
+        this.angel.addGraceReward(ether('1'), now, { from: rewarder }),
         'end time should be in the future'
       );
     });

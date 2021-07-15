@@ -193,21 +193,21 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         return Math.min(block.timestamp, endTime);
     }
 
-    /// @notice Sets the amount of GRACE to be distributed and the end time. Can only be called by the owner.
-    /// @param _amount The amount of GRACE to be distributed.
+    /// @notice Add extra amount of GRACE to be distributed and the end time. Can only be called by the owner.
+    /// @param _amount The extra amount of GRACE to be distributed.
     /// @param _endTime UNIX timestamp that indicates the end of the calculating period.
-    function setGraceReward(uint256 _amount, uint256 _endTime)
+    function addGraceReward(uint256 _amount, uint256 _endTime)
         external
         onlyOwner
     {
         _requireMsg(
             _amount > 0,
-            "setGraceReward",
+            "addGraceReward",
             "grace amount should be greater than 0"
         );
         _requireMsg(
             _endTime > block.timestamp,
-            "setGraceReward",
+            "addGraceReward",
             "end time should be in the future"
         );
         massUpdatePools();
@@ -227,7 +227,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         // TODO: add event?
     }
 
-    /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
+    /// @notice Set the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
     function setGracePerSecond(uint256 _gracePerSecond, uint256 _endTime)
         external
