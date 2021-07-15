@@ -141,6 +141,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IERC20 _lpToken,
         IRewarder _rewarder
     ) external onlyOwner {
+        massUpdatePools();
+
         uint256 pid = lpToken.length;
 
         totalAllocPoint = totalAllocPoint.add(allocPoint);
@@ -174,6 +176,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IRewarder _rewarder,
         bool overwrite
     ) external onlyOwner {
+        massUpdatePools();
+        
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
