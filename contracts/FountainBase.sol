@@ -74,7 +74,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @param angel The angel to be queried.
     /// @return The pid in angel.
     /// @return The total balance deposited in angel.
-    function angelInfo(IAngel angel) public view returns (uint256, uint256) {
+    function angelInfo(IAngel angel) external view returns (uint256, uint256) {
         AngelInfo storage info = _angelInfos[angel];
         _requireMsg(info.isSet, "angelInfo", "Fountain: angel not set");
         return (info.pid, info.totalBalance);

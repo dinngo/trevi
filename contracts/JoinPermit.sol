@@ -43,7 +43,7 @@ abstract contract JoinPermit is FountainBase {
     /// @param sender The sender address.
     /// @return The time limit.
     function joinTimeLimit(address user, address sender)
-        public
+        external
         view
         returns (uint256)
     {
@@ -106,7 +106,7 @@ abstract contract JoinPermit is FountainBase {
         _joinApprove(user, sender, timeLimit);
     }
 
-    function joinNonces(address user) public view returns (uint256) {
+    function joinNonces(address user) external view returns (uint256) {
         return _nonces[user].current();
     }
 

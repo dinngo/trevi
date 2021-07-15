@@ -43,7 +43,7 @@ abstract contract HarvestPermit is FountainBase {
     /// @param sender The sender address.
     /// @return The time limit.
     function harvestTimeLimit(address owner, address sender)
-        public
+        external
         view
         returns (uint256)
     {
@@ -106,7 +106,7 @@ abstract contract HarvestPermit is FountainBase {
         _harvestApprove(owner, sender, timeLimit);
     }
 
-    function harvestNonces(address owner) public view returns (uint256) {
+    function harvestNonces(address owner) external view returns (uint256) {
         return _nonces[owner].current();
     }
 

@@ -68,7 +68,7 @@ contract ERC20FlashLoan is IFlashLender {
         address token,
         uint256 amount,
         bytes calldata data
-    ) public override returns (bool) {
+    ) external override returns (bool) {
         uint256 fee = flashFee(token, amount);
         // send token to receiver
         lendingToken.safeTransfer(address(receiver), amount);
