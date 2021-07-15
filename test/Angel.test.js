@@ -586,7 +586,7 @@ contract('Angel', function([_, user, rewarder]) {
   describe('AddGraceReward', function() {
     it('Allocate reward', async function() {
       // Forward to skip leftover
-      await increase(duration.hours(10));
+      await increase(duration.days(10));
 
       const tokenBalanceRewarder = await this.rwdToken.balanceOf.call(rewarder);
       const tokenBalanceAngel = await this.rwdToken.balanceOf.call(
@@ -648,7 +648,7 @@ contract('Angel', function([_, user, rewarder]) {
   describe('SetGracePerSecond', function() {
     it('Allocate reward', async function() {
       // Forward to skip leftover
-      await increase(duration.hours(10));
+      await increase(duration.days(10));
 
       const tokenBalanceRewarder = await this.rwdToken.balanceOf.call(rewarder);
       const tokenBalanceAngel = await this.rwdToken.balanceOf.call(
