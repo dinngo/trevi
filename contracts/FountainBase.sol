@@ -23,7 +23,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     IERC20 public immutable stakingToken;
 
     IFountainFactory public immutable factory;
-    IArchangel public immutable archangel;
 
     /// @notice The information of angel that is cached in Fountain
     struct AngelInfo {
@@ -53,7 +52,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         stakingToken = token;
         IFountainFactory f = IFountainFactory(msg.sender);
         factory = f;
-        archangel = IArchangel(f.archangel());
     }
 
     // Getters

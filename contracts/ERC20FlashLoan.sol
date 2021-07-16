@@ -11,7 +11,7 @@ contract ERC20FlashLoan is IFlashLender {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
-    IERC20 private immutable _lendingToken;
+    IERC20 public immutable lendingToken;
     uint256 public flashLoanFee;
     uint256 public constant FEE_BASE = 1e4;
     uint256 public constant FEE_BASE_OFFSET = FEE_BASE / 2;
@@ -20,7 +20,7 @@ contract ERC20FlashLoan is IFlashLender {
 
     constructor(IERC20 token, uint256 fee) public {
         require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
-        _lendingToken = token;
+        lendingToken = token;
         flashLoanFee = fee;
     }
 
@@ -36,8 +36,8 @@ contract ERC20FlashLoan is IFlashLender {
         returns (uint256)
     {
         return
-            token == address(_lendingToken)
-                ? _lendingToken.balanceOf(address(this))
+            token == address(lendingToken)
+                ? lendingToken.balanceOf(address(this))
                 : 0;
     }
 
@@ -53,7 +53,7 @@ contract ERC20FlashLoan is IFlashLender {
         override
         returns (uint256)
     {
-        require(token == address(_lendingToken), "ERC20FlashLoan: wrong token");
+        require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
         // The fee will be rounded half up
         return (amount.mul(flashLoanFee).add(FEE_BASE_OFFSET)).div(FEE_BASE);
     }
@@ -73,27 +73,27 @@ contract ERC20FlashLoan is IFlashLender {
     ) external override returns (bool) {
         uint256 fee = flashFee(token, amount);
         // send token to receiver
-        _lendingToken.safeTransfer(address(receiver), amount);
+        lendingToken.safeTransfer(address(receiver), amount);
         require(
             receiver.onFlashLoan(msg.sender, token, amount, fee, data) ==
                 _RETURN_VALUE,
             "ERC20FlashLoan: invalid return value"
         );
         uint256 currentAllowance =
-            _lendingToken.allowance(address(receiver), address(this));
+            lendingToken.allowance(address(receiver), address(this));
         uint256 totalDebt = amount.add(fee);
         require(
             currentAllowance >= totalDebt,
             "ERC20FlashLoan: allowance does not allow refund"
         );
         // get token from receiver
-        _lendingToken.safeTransferFrom(
+        lendingToken.safeTransferFrom(
             address(receiver),
             address(this),
             totalDebt
         );
         address collector = flashLoanFeeCollector();
-        if (collector != address(0)) _lendingToken.safeTransfer(collector, fee);
+        if (collector != address(0)) lendingToken.safeTransfer(collector, fee);
 
         return true;
     }
