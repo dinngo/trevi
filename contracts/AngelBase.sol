@@ -3,10 +3,11 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/Math.sol";
+
 import "./libraries/boringcrypto/libraries/BoringMath.sol";
 import "./libraries/boringcrypto/BoringBatchable.sol";
 import "./libraries/boringcrypto/BoringOwnable.sol";
-import "./libraries/Math.sol";
 import "./libraries/SignedSafeMath.sol";
 import "./interfaces/IRewarder.sol";
 import "./interfaces/IMasterChef.sol";
@@ -131,6 +132,10 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         pools = poolInfo.length;
     }
 
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return Math.min(block.timestamp, endTime);
+    }
+
     /// @notice Add a new LP to the pool. Can only be called by the owner.
     /// DO NOT add the same LP token more than once. Rewards will be messed up if you do.
     /// @param allocPoint AP of the new pool.
@@ -191,10 +196,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             overwrite ? _rewarder : rewarder[_pid],
             overwrite
         );
-    }
-
-    function lastTimeRewardApplicable() public view returns (uint256) {
-        return Math.min(block.timestamp, endTime);
     }
 
     /// @notice Add extra amount of GRACE to be distributed and the end time. Can only be called by the owner.
