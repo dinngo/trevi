@@ -159,18 +159,19 @@ contract('Angel', function([_, user, rewarder]) {
   });
 
   describe('PendingGrace', function() {
-    it('PendingGrace should equal ExpectedGrace', async function() {
-      await this.angel.add(
-        new BN('10'),
-        this.stkToken.address,
-        this.rewarder.address,
-        { from: rewarder }
-      );
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
+    beforeEach(async function() {
+      // Allocate and join
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      await this.stkToken.approve(this.fountain.address, ether('1'), {
         from: user,
       });
       await this.fountain.joinAngel(this.angel.address, { from: user });
       await this.fountain.deposit(ether('1'), { from: user });
+    });
+
+    it('PendingGrace should equal ExpectedGrace', async function() {
       const timestamp = await latest();
       await increase(seconds(86400));
       await this.angel.updatePool(new BN('0'));
@@ -181,28 +182,12 @@ contract('Angel', function([_, user, rewarder]) {
     });
 
     it('Should not revert when lp > 0 but totalAllocPoint = 0', async function() {
-      await this.angel.add(0, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
-      });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
-      });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
       await increase(seconds(86400));
       // will revert if AngelBase do not check pool.allocPoint > 0
       await this.angel.pendingGrace.call(new BN('0'), user);
     });
 
     it('When time is lastRewardTime', async function() {
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
-      });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
-      });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
       const timestamp = await latest();
       await advanceBlockTo((await latestBlock()).add(new BN('3')));
       await this.angel.updatePool(new BN('0'));
@@ -213,14 +198,6 @@ contract('Angel', function([_, user, rewarder]) {
     });
 
     it('When time is later than endTime', async function() {
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
-      });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
-        from: user,
-      });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
-      await this.fountain.deposit(ether('1'), { from: user });
       const timestamp = await latest();
       await increase(duration.days(10));
       const timestamp2 = this.rewardEndTimeInit;
@@ -232,31 +209,22 @@ contract('Angel', function([_, user, rewarder]) {
 
     it('When the pool is expired', async function() {
       await increase(duration.days(10));
-      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-        from: rewarder,
-      });
-      await this.stkToken.approve(this.fountain.address, ether('10'), {
+      const pendingGraceBefore = await this.angel.pendingGrace.call(
+        new BN('0'),
+        user
+      );
+      await this.stkToken.approve(this.fountain.address, ether('1'), {
         from: user,
       });
-      await this.fountain.joinAngel(this.angel.address, { from: user });
       await this.fountain.deposit(ether('1'), { from: user });
       await increase(duration.days(1));
       await this.angel.updatePool(new BN('0'));
       let pendingGrace = await this.angel.pendingGrace.call(new BN('0'), user);
-      expect(pendingGrace).to.be.zero;
+      expect(pendingGrace).to.be.bignumber.eq(pendingGraceBefore);
     });
 
     describe('Reallocate by addGraceReward', function() {
       it('Reallocate after expired', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(10));
         const timestamp2 = this.rewardEndTimeInit;
@@ -293,15 +261,6 @@ contract('Angel', function([_, user, rewarder]) {
       });
 
       it('Reallocate before expired and set later end time', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
@@ -352,15 +311,6 @@ contract('Angel', function([_, user, rewarder]) {
       });
 
       it('Reallocate before expired and set earlier end time', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
@@ -414,15 +364,6 @@ contract('Angel', function([_, user, rewarder]) {
 
     describe('Reallocate by setGracePerSecond', function() {
       it('Reallocate after expired', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(10));
         const timestamp2 = this.rewardEndTimeInit;
@@ -458,15 +399,6 @@ contract('Angel', function([_, user, rewarder]) {
       });
 
       it('Reallocate before expired with shortage', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
@@ -511,15 +443,6 @@ contract('Angel', function([_, user, rewarder]) {
       });
 
       it('Reallocate before expired without shortage', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
@@ -556,15 +479,6 @@ contract('Angel', function([_, user, rewarder]) {
       });
 
       it('Set GracePerSecond to 0', async function() {
-        // Allocate and join
-        await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
-          from: rewarder,
-        });
-        await this.stkToken.approve(this.fountain.address, ether('10'), {
-          from: user,
-        });
-        await this.fountain.joinAngel(this.angel.address, { from: user });
-        await this.fountain.deposit(ether('1'), { from: user });
         const timestamp = await latest();
         await increase(duration.days(1));
         // Re-allocate
