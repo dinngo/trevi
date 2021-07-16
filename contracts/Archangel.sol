@@ -17,10 +17,11 @@ contract Archangel is Ownable, ErrorMsg {
 
     AngelFactory public immutable angelFactory;
     FountainFactory public immutable fountainFactory;
-    uint256 public defaultFlashLoanFee = 9;
+    uint256 public defaultFlashLoanFee;
     uint256 public constant FEE_BASE = 1e4;
 
-    constructor() public {
+    constructor(uint256 _defaultFlashLoanFee) public {
+        defaultFlashLoanFee = _defaultFlashLoanFee;
         angelFactory = new AngelFactory();
         fountainFactory = new FountainFactory();
     }

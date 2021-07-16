@@ -22,7 +22,7 @@ const SimpleToken = artifacts.require('SimpleToken');
 
 contract('Archangel', function([_, user, owner]) {
   beforeEach(async function() {
-    this.archangel = await Archangel.new({ from: owner });
+    this.archangel = await Archangel.new(new BN('9'), { from: owner });
     const angelFactory = await this.archangel.angelFactory.call();
     const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
