@@ -180,6 +180,20 @@ contract('Angel', function([_, user, rewarder]) {
       expectEqWithinBps(pendingGrace, expectedGrace);
     });
 
+    it('Should not revert when lp > 0 but totalAllocPoint = 0', async function() {
+      await this.angel.add(0, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      await this.stkToken.approve(this.fountain.address, ether('10'), {
+        from: user,
+      });
+      await this.fountain.joinAngel(this.angel.address, { from: user });
+      await this.fountain.deposit(ether('1'), { from: user });
+      await increase(seconds(86400));
+      // will revert if AngelBase do not check pool.allocPoint > 0
+      await this.angel.pendingGrace.call(new BN('0'), user);
+    });
+
     it('When time is lastRewardTime', async function() {
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
@@ -836,6 +850,20 @@ contract('Angel', function([_, user, rewarder]) {
         accGracePerShare: (await this.angel.poolInfo.call(new BN('0')))
           .accGracePerShare,
       });
+    });
+
+    it('Should not revert when lp > 0 but totalAllocPoint = 0', async function() {
+      await this.angel.add(0, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      await this.stkToken.approve(this.fountain.address, ether('10'), {
+        from: user,
+      });
+      await this.fountain.joinAngel(this.angel.address, { from: user });
+      await this.fountain.deposit(ether('1'), { from: user });
+      await increase(seconds(86400));
+      // will revert if AngelBase do not check pool.allocPoint > 0
+      await this.angel.updatePool(new BN('0'));
     });
   });
 

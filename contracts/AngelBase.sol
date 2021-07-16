@@ -293,7 +293,11 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IFountain fountain =
             IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
-        if (lpSupply != 0 && lastTimeRewardApplicable() > pool.lastRewardTime) {
+        if (
+            lpSupply != 0 &&
+            pool.allocPoint > 0 &&
+            lastTimeRewardApplicable() > pool.lastRewardTime
+        ) {
             uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
             uint256 graceReward =
                 time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
@@ -339,7 +343,9 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
             // Only accumulate reward before end time
             if (
-                lpSupply > 0 && lastTimeRewardApplicable() > pool.lastRewardTime
+                lpSupply > 0 &&
+                pool.allocPoint > 0 &&
+                lastTimeRewardApplicable() > pool.lastRewardTime
             ) {
                 uint256 time =
                     lastTimeRewardApplicable().sub(pool.lastRewardTime);
