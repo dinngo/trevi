@@ -66,6 +66,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
     uint256 public endTime = 0;
+    bool public massUpdated;
 
     event Deposit(
         address indexed user,
@@ -115,6 +116,12 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         _;
     }
 
+    modifier ownerMassUpdate() {
+        if (!massUpdated) massUpdatePoolsNonZero();
+        _;
+        massUpdated = false;
+    }
+
     /// @param _grace The GRACE token contract address.
     constructor(IERC20 _grace) public {
         GRACE = _grace;
@@ -145,9 +152,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 allocPoint,
         IERC20 _lpToken,
         IRewarder _rewarder
-    ) external onlyOwner {
-        massUpdatePools();
-
+    ) external onlyOwner ownerMassUpdate {
         uint256 pid = lpToken.length;
 
         totalAllocPoint = totalAllocPoint.add(allocPoint);
@@ -180,9 +185,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 _allocPoint,
         IRewarder _rewarder,
         bool overwrite
-    ) external onlyOwner {
-        massUpdatePools();
-
+    ) external onlyOwner ownerMassUpdate {
+        updatePool(_pid);
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
@@ -204,6 +208,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     function addGraceReward(uint256 _amount, uint256 _endTime)
         external
         onlyOwner
+        ownerMassUpdate
     {
         _requireMsg(
             _amount > 0,
@@ -215,7 +220,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             "addGraceReward",
             "end time should be in the future"
         );
-        massUpdatePools();
 
         uint256 duration = _endTime.sub(block.timestamp);
         uint256 newGracePerSecond = 0;
@@ -244,6 +248,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     function setGracePerSecond(uint256 _gracePerSecond, uint256 _endTime)
         external
         onlyOwner
+        ownerMassUpdate
     {
         _requireMsg(
             _endTime > block.timestamp,
@@ -255,7 +260,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             "setGracePerSecond",
             "new grace per second exceeds uint128"
         );
-        massUpdatePools();
 
         uint256 duration = _endTime.sub(block.timestamp);
         uint256 rewardNeeded = _gracePerSecond.mul(duration);
@@ -313,21 +317,37 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             .toUInt256();
     }
 
-    /// @notice Update reward variables for all pools. Be careful of gas spending!
-    function massUpdatePools() public {
+    /// @notice Update reward variables for all pools with non-zero allocPoint.
+    /// Be careful of gas spending!
+    function massUpdatePoolsNonZero() public {
         uint256 len = lpToken.length;
         for (uint256 i = 0; i < len; ++i) {
-            updatePool(i);
+            if (poolInfo[i].allocPoint > 0) updatePool(i);
         }
+    }
+
+    /// @notice Update reward variables for all pools with non-zero allocPoint.
+    /// Be careful of gas spending! Can only be called by the owner.
+    function massUpdatePoolsNonZeroAndSet() external onlyOwner {
+        massUpdatePoolsNonZero();
+        massUpdated = true;
     }
 
     /// @notice Update reward variables for all pools. Be careful of gas spending!
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
-    function massUpdatePools(uint256[] calldata pids) external {
+    function massUpdatePools(uint256[] memory pids) public {
         uint256 len = pids.length;
         for (uint256 i = 0; i < len; ++i) {
             updatePool(pids[i]);
         }
+    }
+
+    /// @notice Update reward variables for all pools and set the flag.
+    /// Be careful of gas spending! Can only be called by the owner.
+    /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
+    function massUpdatePoolsAndSet(uint256[] calldata pids) external onlyOwner {
+        massUpdatePools(pids);
+        massUpdated = true;
     }
 
     /// @notice Update reward variables of the given pool.
