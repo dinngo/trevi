@@ -17,7 +17,7 @@ contract Fountain is
 {
     modifier onlyArchangel {
         _requireMsg(
-            _msgSender() == address(archangel),
+            _msgSender() == factory.archangel(),
             "general",
             "not from archangel"
         );

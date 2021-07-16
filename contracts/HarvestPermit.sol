@@ -12,7 +12,7 @@ abstract contract HarvestPermit is FountainBase {
     mapping(address => Counters.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
-    bytes32 private immutable _HARVEST_PERMIT_TYPEHASH =
+    bytes32 private constant _HARVEST_PERMIT_TYPEHASH =
         keccak256(
             "HarvestPermit(address owner,address sender,uint256 timeLimit,uint256 nonce,uint256 deadline)"
         );
@@ -43,7 +43,7 @@ abstract contract HarvestPermit is FountainBase {
     /// @param sender The sender address.
     /// @return The time limit.
     function harvestTimeLimit(address owner, address sender)
-        public
+        external
         view
         returns (uint256)
     {
@@ -106,7 +106,7 @@ abstract contract HarvestPermit is FountainBase {
         _harvestApprove(owner, sender, timeLimit);
     }
 
-    function harvestNonces(address owner) public view returns (uint256) {
+    function harvestNonces(address owner) external view returns (uint256) {
         return _nonces[owner].current();
     }
 
@@ -118,7 +118,7 @@ abstract contract HarvestPermit is FountainBase {
         IAngel angel,
         address from,
         address to
-    ) public canHarvestFrom(from) {
+    ) public canHarvestFrom(from) nonReentrant {
         _harvestAngel(angel, from, to);
         emit Harvest(from);
     }
@@ -129,6 +129,7 @@ abstract contract HarvestPermit is FountainBase {
     function harvestAllFrom(address from, address to)
         public
         canHarvestFrom(from)
+        nonReentrant
     {
         IAngel[] memory angels = joinedAngel(from);
         for (uint256 i = 0; i < angels.length; i++) {

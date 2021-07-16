@@ -12,7 +12,7 @@ abstract contract JoinPermit is FountainBase {
     mapping(address => Counters.Counter) private _nonces;
 
     // solhint-disable-next-line var-name-mixedcase
-    bytes32 private immutable _JOIN_PERMIT_TYPEHASH =
+    bytes32 private constant _JOIN_PERMIT_TYPEHASH =
         keccak256(
             "JoinPermit(address user,address sender,uint256 timeLimit,uint256 nonce,uint256 deadline)"
         );
@@ -43,7 +43,7 @@ abstract contract JoinPermit is FountainBase {
     /// @param sender The sender address.
     /// @return The time limit.
     function joinTimeLimit(address user, address sender)
-        public
+        external
         view
         returns (uint256)
     {
@@ -106,14 +106,18 @@ abstract contract JoinPermit is FountainBase {
         _joinApprove(user, sender, timeLimit);
     }
 
-    function joinNonces(address user) public view returns (uint256) {
+    function joinNonces(address user) external view returns (uint256) {
         return _nonces[user].current();
     }
 
     /// @notice User may join angel for permitted user.
     /// @param angel The angel address.
     /// @param user The user address.
-    function joinAngelFor(IAngel angel, address user) public canJoinFor(user) {
+    function joinAngelFor(IAngel angel, address user)
+        public
+        canJoinFor(user)
+        nonReentrant
+    {
         _joinAngel(angel, user);
     }
 
@@ -123,6 +127,7 @@ abstract contract JoinPermit is FountainBase {
     function joinAngelsFor(IAngel[] memory angels, address user)
         public
         canJoinFor(user)
+        nonReentrant
     {
         for (uint256 i = 0; i < angels.length; i++) {
             _joinAngel(angels[i], user);

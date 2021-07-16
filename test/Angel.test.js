@@ -28,7 +28,7 @@ const FlashBorrower = artifacts.require('FlashBorrower');
 
 contract('Angel', function([_, user, rewarder]) {
   beforeEach(async function() {
-    this.archangel = await Archangel.new();
+    this.archangel = await Archangel.new(new BN('9'));
     const angelFactory = await this.archangel.angelFactory.call();
     const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
@@ -211,6 +211,26 @@ contract('Angel', function([_, user, rewarder]) {
           lpToken: this.stkToken.address,
           rewarder: this.rewarder.address,
         }
+      );
+    });
+
+    it('Should revert when adding repeat lp token', async function() {
+      await this.angel.add(
+        new BN('10'),
+        this.stkToken.address,
+        this.rewarder.address,
+        {
+          from: rewarder,
+        }
+      );
+      await expectRevert(
+        this.angel.add(
+          new BN('10'),
+          this.stkToken.address,
+          this.rewarder.address,
+          { from: rewarder }
+        ),
+        'angel is set'
       );
     });
   });

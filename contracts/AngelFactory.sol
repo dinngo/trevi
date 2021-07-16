@@ -50,8 +50,8 @@ contract AngelFactory is ErrorMsg {
             "reward is zero address"
         );
         Angel newAngel = new Angel(reward, archangel.defaultFlashLoanFee());
-        newAngel.transferOwnership(msg.sender, true, false);
         _rewards[newAngel] = reward;
+        newAngel.transferOwnership(msg.sender, true, false);
 
         emit Created(address(newAngel));
 

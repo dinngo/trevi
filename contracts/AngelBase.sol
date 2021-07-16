@@ -125,7 +125,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     /// @notice Returns the number of MCV2 pools.
-    function poolLength() public view returns (uint256 pools) {
+    function poolLength() external view returns (uint256 pools) {
         pools = poolInfo.length;
     }
 
@@ -138,7 +138,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 allocPoint,
         IERC20 _lpToken,
         IRewarder _rewarder
-    ) public onlyOwner {
+    ) external onlyOwner {
         uint256 pid = lpToken.length;
 
         totalAllocPoint = totalAllocPoint.add(allocPoint);
@@ -171,7 +171,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 _allocPoint,
         IRewarder _rewarder,
         bool overwrite
-    ) public onlyOwner {
+    ) external onlyOwner {
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
@@ -189,7 +189,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
     /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
-    function setGracePerSecond(uint256 _gracePerSecond) public onlyOwner {
+    function setGracePerSecond(uint256 _gracePerSecond) external onlyOwner {
         gracePerSecond = _gracePerSecond;
         emit LogGracePerSecond(_gracePerSecond);
     }
@@ -276,7 +276,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFountain(pid) {
+    ) external onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         UserInfo storage user = userInfo[pid][to];
 
@@ -308,7 +308,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 pid,
         uint256 amount,
         address to
-    ) public onlyFountain(pid) {
+    ) external onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
@@ -345,7 +345,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 pid,
         address from,
         address to
-    ) public onlyFountain(pid) {
+    ) external onlyFountain(pid) {
         PoolInfo memory pool = updatePool(pid);
         ////////////////////////// New
         // Delegate by fountain
@@ -389,7 +389,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @param pid The index of the pool. See `poolInfo`.
     /// @param to Receiver of the LP tokens.
     function emergencyWithdraw(uint256 pid, address to)
-        public
+        external
         onlyFountain(pid)
     {
         ////////////////////////// New
