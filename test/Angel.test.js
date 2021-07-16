@@ -612,6 +612,22 @@ contract('Angel', function([_, user, rewarder]) {
       expectEqWithinBps(await this.angel.gracePerSecond.call(), newRewardRate);
     });
 
+    it('New gracePerSecond exceeds limit', async function() {
+      // Forward to skip leftover
+      await increase(duration.days(10));
+
+      const now = await latest();
+      const rewardDuration = duration.seconds(10);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      const rewardAmount = MAX_UINT256;
+      await expectRevert(
+        this.angel.addGraceReward(rewardAmount, rewardEndTimeTemp, {
+          from: rewarder,
+        }),
+        'new grace per second exceeds uint128'
+      );
+    });
+
     it('Allocate zero amount', async function() {
       const now = await latest();
       const rewardDuration = duration.days(2);
@@ -677,6 +693,18 @@ contract('Angel', function([_, user, rewarder]) {
         await this.angel.gracePerSecond.call(),
         newRewardRate,
         0
+      );
+    });
+
+    it('New gracePerSecond exceeds limit', async function() {
+      const now = await latest();
+      const rewardDuration = duration.days(2);
+      const rewardEndTimeTemp = new BN(now).add(new BN(rewardDuration));
+      await expectRevert(
+        this.angel.setGracePerSecond(MAX_UINT256, rewardEndTimeTemp, {
+          from: rewarder,
+        }),
+        'new grace per second exceeds uint128'
       );
     });
 

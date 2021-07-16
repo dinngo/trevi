@@ -217,13 +217,20 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         massUpdatePools();
 
         uint256 duration = _endTime.sub(block.timestamp);
+        uint256 newGracePerSecond = 0;
         if (block.timestamp >= endTime) {
-            gracePerSecond = _amount / duration;
+            newGracePerSecond = _amount / duration;
         } else {
             uint256 remaining = endTime.sub(block.timestamp);
             uint256 leftover = remaining.mul(gracePerSecond);
-            gracePerSecond = leftover.add(_amount) / duration;
+            newGracePerSecond = leftover.add(_amount) / duration;
         }
+        _requireMsg(
+            newGracePerSecond <= type(uint128).max,
+            "addGraceReward",
+            "new grace per second exceeds uint128"
+        );
+        gracePerSecond = newGracePerSecond;
         emit LogGracePerSecond(gracePerSecond);
         endTime = _endTime;
 
@@ -241,6 +248,11 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             _endTime > block.timestamp,
             "setGracePerSecond",
             "end time should be in the future"
+        );
+        _requireMsg(
+            _gracePerSecond <= type(uint128).max,
+            "setGracePerSecond",
+            "new grace per second exceeds uint128"
         );
         massUpdatePools();
 
