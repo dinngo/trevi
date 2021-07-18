@@ -66,7 +66,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
     uint256 public endTime = 0;
-    bool public massUpdated;
+    bool private massUpdated;
 
     event Deposit(
         address indexed user,
