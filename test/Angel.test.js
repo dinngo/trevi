@@ -147,7 +147,7 @@ contract('Angel', function([_, user, rewarder]) {
       const lastRewardTimePool2 = (await this.angel.poolInfo.call(2))
         .lastRewardTime;
       await increase(duration.days(1));
-      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool2
+      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool0 and pool2
       await this.angel.set(2, 0, this.rewarder.address, false, {
         from: rewarder,
       });
@@ -190,7 +190,7 @@ contract('Angel', function([_, user, rewarder]) {
       await increase(duration.days(1));
       // Set the flag without updating any pool
       await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
-      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool1
+      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool2
       await this.angel.set(2, 0, this.rewarder.address, false, {
         from: rewarder,
       });
