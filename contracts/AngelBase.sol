@@ -65,8 +65,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     ////////////////////////// New
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
-    uint256 public endTime = 0;
-    uint256 private skipOwnerMassUpdateUntil = 0;
+    uint256 public endTime;
+    uint256 private _skipOwnerMassUpdateUntil;
 
     event Deposit(
         address indexed user,
@@ -117,10 +117,10 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     modifier ownerMassUpdate() {
-        if (block.timestamp > skipOwnerMassUpdateUntil)
+        if (block.timestamp > _skipOwnerMassUpdateUntil)
             massUpdatePoolsNonZero();
         _;
-        skipOwnerMassUpdateUntil = block.timestamp;
+        _skipOwnerMassUpdateUntil = block.timestamp;
     }
 
     /// @param _grace The GRACE token contract address.
@@ -223,7 +223,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         );
 
         uint256 duration = _endTime.sub(block.timestamp);
-        uint256 newGracePerSecond = 0;
+        uint256 newGracePerSecond;
         if (block.timestamp >= endTime) {
             newGracePerSecond = _amount / duration;
         } else {
@@ -264,7 +264,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
 
         uint256 duration = _endTime.sub(block.timestamp);
         uint256 rewardNeeded = _gracePerSecond.mul(duration);
-        uint256 shortage = 0;
+        uint256 shortage;
         if (block.timestamp >= endTime) {
             shortage = rewardNeeded;
         } else {
@@ -336,14 +336,15 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         }
     }
 
-    /// @notice Update reward variables for all pools and set the flag. Be careful of gas spending! Can only be called by the owner.
+    /// @notice Update reward variables for all pools and set the expire time for skipping `massUpdatePoolsNonZero()`.
+    /// Be careful of gas spending! Can only be called by the owner.
     /// DO NOT use this function until `massUpdatePoolsNonZero()` reverts because of out of gas.
     /// If that is the case, try to update all pools first and then call onlyOwner function to set a correct state.
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
     function massUpdatePoolsAndSet(uint256[] calldata pids) external onlyOwner {
         massUpdatePools(pids);
         // Leave an hour for owner to be able to skip `massUpdatePoolsNonZero()`
-        skipOwnerMassUpdateUntil = block.timestamp.add(3600);
+        _skipOwnerMassUpdateUntil = block.timestamp.add(3600);
     }
 
     /// @notice Update reward variables of the given pool.
