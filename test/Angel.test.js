@@ -27,6 +27,7 @@ const RewarderMock = artifacts.require('RewarderMock');
 const FlashBorrower = artifacts.require('FlashBorrower');
 
 contract('Angel', function([_, user, rewarder]) {
+  const FLAG_LIMIT = duration.seconds(3600);
   beforeEach(async function() {
     this.archangel = await Archangel.new(new BN('9'));
     const angelFactory = await this.archangel.angelFactory.call();
@@ -931,6 +932,22 @@ contract('Angel', function([_, user, rewarder]) {
         expect(
           (await this.angel.poolInfo.call(0)).lastRewardTime
         ).to.be.bignumber.eq(this.lastRewardTimePool0);
+      });
+
+      it('should NOT skip non-zero mass update when flag is set and EXPIRED', async function() {
+        await increase(duration.days(1));
+        // Set the flag without updating any pool
+        await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+        // Make flag expired
+        await increase(FLAG_LIMIT.add(duration.seconds(1)));
+        // Set pool with zero allocPoint to zero
+        await this.angel.set(1, 0, this.rewarder.address, false, {
+          from: rewarder,
+        });
+        // Pool0 should be updated
+        expect(
+          (await this.angel.poolInfo.call(0)).lastRewardTime
+        ).to.be.bignumber.gt(this.lastRewardTimePool0);
       });
 
       it('updating invalid pools should fail', async function() {

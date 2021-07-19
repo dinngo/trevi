@@ -66,7 +66,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
     uint256 public endTime = 0;
-    bool private massUpdated;
+    uint256 private skipOwnerMassUpdateUntil = 0;
 
     event Deposit(
         address indexed user,
@@ -117,9 +117,10 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     modifier ownerMassUpdate() {
-        if (!massUpdated) massUpdatePoolsNonZero();
+        if (block.timestamp > skipOwnerMassUpdateUntil)
+            massUpdatePoolsNonZero();
         _;
-        massUpdated = false;
+        skipOwnerMassUpdateUntil = block.timestamp;
     }
 
     /// @param _grace The GRACE token contract address.
@@ -340,7 +341,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
     function massUpdatePoolsAndSet(uint256[] calldata pids) external onlyOwner {
         massUpdatePools(pids);
-        massUpdated = true;
+        // Leave an hour for owner to be able to skip `massUpdatePoolsNonZero()`
+        skipOwnerMassUpdateUntil = block.timestamp.add(3600);
     }
 
     /// @notice Update reward variables of the given pool.
