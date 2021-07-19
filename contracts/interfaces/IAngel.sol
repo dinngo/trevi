@@ -9,7 +9,7 @@ interface IAngel {
     }
 
     struct PoolInfo {
-        uint128 accSushiPerShare;
+        uint128 accGracePerShare;
         uint64 lastRewardTime;
         uint64 allocPoint;
     }

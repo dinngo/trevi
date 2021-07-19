@@ -3,9 +3,10 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
-import "./libraries/ERC20Permit.sol";
-import "./libraries/SafeERC20.sol";
-import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
+import "./ERC20Permit.sol";
 
 contract FountainToken is ERC20Permit {
     constructor(string memory name_, string memory symbol_)
@@ -22,7 +23,7 @@ contract FountainToken is ERC20Permit {
         uint8 v,
         bytes32 r,
         bytes32 s
-    ) public returns (bool) {
+    ) external returns (bool) {
         permit(owner, msg.sender, value, deadline, v, r, s);
         return transferFrom(owner, recipient, value);
     }

@@ -15,7 +15,7 @@ const utils = web3.utils;
 const ethSigUtil = require('eth-sig-util');
 const { fromRpcSig } = require('ethereumjs-util');
 const { EIP712Domain, domainSeparator } = require('./helpers/eip712');
-const { getCreated } = require('./helpers/utils');
+const { getCreated, getMnemonicPrivateKey } = require('./helpers/utils');
 
 const { expect } = require('chai');
 
@@ -54,7 +54,7 @@ const JoinPermit = [
 
 contract('Fountain', function([_, user, someone, rewarder, owner]) {
   beforeEach(async function() {
-    this.archangel = await Archangel.new({ from: owner });
+    this.archangel = await Archangel.new(new BN('9'), { from: owner });
     const angelFactory = await this.archangel.angelFactory.call();
     const fountainFactory = await this.archangel.fountainFactory.call();
     this.angelFactory = await AngelFactory.at(angelFactory);
@@ -125,14 +125,19 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         from: rewarder,
       });
       this.angel2 = await getCreated(receipt, Angel);
+      const endTime = (await latest()).add(duration.days(1));
       // Setup angel1
-      await this.angel1.setSushiPerSecond(ether('0.01'), { from: rewarder });
-      await this.rwdToken1.transfer(this.angel1.address, ether('10000'), {
+      await this.rwdToken1.approve(this.angel1.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel1.setGracePerSecond(ether('0.01'), endTime, {
         from: rewarder,
       });
       // Setup angel2
-      await this.angel2.setSushiPerSecond(ether('0.01'), { from: rewarder });
-      await this.rwdToken2.transfer(this.angel2.address, ether('10000'), {
+      await this.rwdToken2.approve(this.angel2.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel2.setGracePerSecond(ether('0.01'), endTime, {
         from: rewarder,
       });
       // Get fountain
@@ -142,7 +147,22 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       this.rewarder = await Rewarder.new(
         ether('1'),
         this.rwdToken2.address,
-        this.angel1.address
+        this.angel1.address,
+        new BN('0')
+      );
+      // Get Bad Rewarder
+      this.badRewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address,
+        new BN('1')
+      );
+      // Get Gas Monster Rewarder
+      this.gasRewarder = await Rewarder.new(
+        ether('1'),
+        this.rwdToken2.address,
+        this.angel1.address,
+        new BN('2')
       );
     });
 
@@ -280,8 +300,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const user = wallet.address;
           const sender = someone;
           const timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -293,7 +311,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { user, sender, timeLimit, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(user),
             {
               data,
             }
@@ -317,8 +335,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
 
       describe('join for with one-time permit', async function() {
-        let wallet;
-        let user;
         const sender = someone;
         const timeLimit = new BN('1');
         const deadline = MAX_UINT256;
@@ -344,8 +360,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          wallet = await web3.eth.accounts.create();
-          user = wallet.address;
           const nonce = 0;
           const data = {
             primaryType: 'JoinPermit',
@@ -353,19 +367,16 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             domain: { name, version, chainId, verifyingContract },
             message: { user, sender, timeLimit, nonce, deadline },
           };
-          signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
-            {
-              data,
-            }
-          );
+          signature = ethSigUtil.signTypedMessage(getMnemonicPrivateKey(user), {
+            data,
+          });
         });
 
         it('single', async function() {
           const { v, r, s } = fromRpcSig(signature);
           const receipt = await this.fountain.joinAngelForWithPermit(
             this.angel1.address,
-            wallet.address,
+            user,
             timeLimit,
             deadline,
             v,
@@ -375,13 +386,13 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
-          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expectEvent(receipt, 'Join', [user, this.angel1.address]);
+          const angels = await this.fountain.joinedAngel.call(user);
           expect(angels[0]).eq(this.angel1.address);
           // Should expire next time
           increase(seconds(15));
           await expectRevert(
-            this.fountain.joinAngelFor(this.angel2.address, wallet.address, {
+            this.fountain.joinAngelFor(this.angel2.address, user, {
               from: someone,
             }),
             'join not allowed'
@@ -392,7 +403,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const { v, r, s } = fromRpcSig(signature);
           const receipt = await this.fountain.joinAngelsForWithPermit(
             [this.angel1.address, this.angel2.address],
-            wallet.address,
+            user,
             timeLimit,
             deadline,
             v,
@@ -402,9 +413,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Join', [wallet.address, this.angel1.address]);
-          expectEvent(receipt, 'Join', [wallet.address, this.angel2.address]);
-          const angels = await this.fountain.joinedAngel.call(wallet.address);
+          expectEvent(receipt, 'Join', [user, this.angel1.address]);
+          expectEvent(receipt, 'Join', [user, this.angel2.address]);
+          const angels = await this.fountain.joinedAngel.call(user);
           expect(angels[0]).eq(this.angel1.address);
           expect(angels[1]).eq(this.angel2.address);
         });
@@ -430,13 +441,42 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('normal', async function() {
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAngel(this.angel1.address, {
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
+      });
+
+      it('rage quit', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.quitAngel(this.angel1.address, { from: user }),
+          'bad rewarder'
+        );
+        // user rage quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
+        const receipt = await this.fountain.rageQuitAngel(this.angel1.address, {
+          from: user,
+        });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
+        expectEvent(receipt, 'RageQuit', {
+          user: user,
+          angel: this.angel1.address,
+        });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-1);
       });
 
       it('all', async function() {
@@ -454,9 +494,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         // user quit angel from fountain
+        const angelsBefore = await this.fountain.joinedAngel.call(user);
         const receipt = await this.fountain.quitAllAngel({
           from: user,
         });
+        const angelsAfter = await this.fountain.joinedAngel.call(user);
         expectEvent(receipt, 'Quit', {
           user: user,
           angel: this.angel1.address,
@@ -465,6 +507,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           user: user,
           angel: this.angel2.address,
         });
+        expect(angelsAfter.length - angelsBefore.length).to.be.eq(-2);
       });
 
       it('unjoined angel', async function() {
@@ -621,7 +664,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       it('normal', async function() {
         // check joined angel user balance
         const info1Before = await this.angel1.userInfo.call(pid, user);
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user withdraw
         const receipt = await this.fountain.withdraw(depositAmount, {
           from: user,
@@ -629,7 +672,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         expectEvent(receipt, 'Withdraw', [user, depositAmount, user]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
-        const pending = await this.angel1.pendingSushi.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(ether('0'));
         expect(ether('0').sub(info1[1])).to.be.bignumber.gte(pendingBefore);
@@ -642,7 +685,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       it('to others', async function() {
         // check joined angel user balance
         const info1Before = await this.angel1.userInfo.call(pid, user);
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user withdraw
         const receipt = await this.fountain.withdrawTo(depositAmount, someone, {
           from: user,
@@ -650,7 +693,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         expectEvent(receipt, 'Withdraw', [user, depositAmount, someone]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
-        const pending = await this.angel1.pendingSushi.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(ether('0'));
         expect(ether('0').sub(info1[1])).to.be.bignumber.gte(pendingBefore);
@@ -666,7 +709,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       it('max', async function() {
         // check joined angel user balance
         const info1Before = await this.angel1.userInfo.call(pid, user);
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user withdraw
         const receipt = await this.fountain.withdraw(MAX_UINT256, {
           from: user,
@@ -674,7 +717,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         expectEvent(receipt, 'Withdraw', [user, depositAmount, user]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
-        const pending = await this.angel1.pendingSushi.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(ether('0'));
         expect(ether('0').sub(info1[1])).to.be.bignumber.gte(pendingBefore);
@@ -687,7 +730,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       it('0 amount', async function() {
         // check joined angel user balance
         const info1Before = await this.angel1.userInfo.call(pid, user);
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user withdraw
         const receipt = await this.fountain.withdraw(ether('0'), {
           from: user,
@@ -695,7 +738,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         expectEvent(receipt, 'Withdraw', [user, ether('0'), user]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
-        const pending = await this.angel1.pendingSushi.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(depositAmount);
         expect(ether('0').sub(info1[1])).to.be.bignumber.gte(ether('0'));
@@ -739,13 +782,13 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('harvest joined', async function() {
         // user harvest angel1
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         const receipt = await this.fountain.harvest(this.angel1.address, {
           from: user,
         });
         expectEvent(receipt, 'Harvest', [user]);
         const info1After = await this.angel1.userInfo.call(pid, user);
-        const pendingAfter = await this.angel1.pendingSushi.call(pid, user);
+        const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
         const tokenUser = await this.rwdToken1.balanceOf.call(user);
         expect(pendingAfter).to.be.bignumber.eq(ether('0'));
         expect(info1After[1]).to.be.bignumber.eq(tokenUser);
@@ -758,7 +801,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('harvest non-joined', async function() {
         // user harvest angel2
-        const pendingBefore = await this.angel2.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel2.pendingGrace.call(pid, user);
         const receipt = await this.fountain.harvest(this.angel2.address, {
           from: user,
         });
@@ -770,11 +813,11 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       it('harvest all', async function() {
         // user harvest all
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         const receipt = await this.fountain.harvestAll({ from: user });
         expectEvent(receipt, 'Harvest', [user]);
         const info1After = await this.angel1.userInfo.call(pid, user);
-        const pendingAfter = await this.angel1.pendingSushi.call(pid, user);
+        const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
         const tokenUser = await this.rwdToken1.balanceOf.call(user);
         expect(pendingAfter).to.be.bignumber.eq(ether('0'));
         expect(info1After[1]).to.be.bignumber.eq(tokenUser);
@@ -799,7 +842,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         );
         await increase(seconds(86400));
         await this.fountain.withdraw(ether('1'), { from: someone });
-        let expectedReward = await this.angel1.pendingSushi.call(pid, someone);
+        let expectedReward = await this.angel1.pendingGrace.call(pid, someone);
         expect((await this.angel1.userInfo(0, someone))[1]).to.be.bignumber.eq(
           ether('0').sub(expectedReward)
         );
@@ -819,7 +862,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
         it('harvest joined', async function() {
           // user harvest angel1
-          const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFrom(
             this.angel1.address,
             user,
@@ -830,18 +873,20 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           );
           expectEvent(receipt, 'Harvest', [user]);
           const info1After = await this.angel1.userInfo.call(pid, user);
-          const pendingAfter = await this.angel1.pendingSushi.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
           // user harvest angel2
-          const pendingBefore = await this.angel2.pendingSushi.call(pid, user);
+          const pendingBefore = await this.angel2.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFrom(
             this.angel2.address,
             user,
@@ -860,19 +905,21 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
         it('harvest all', async function() {
           // user harvest all
-          const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestAllFrom(user, someone, {
             from: someone,
           });
           expectEvent(receipt, 'Harvest', [user]);
           const info1After = await this.angel1.userInfo.call(pid, user);
-          const pendingAfter = await this.angel1.pendingSushi.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
           expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenSomeone).to.be.bignumber.gte(pendingBefore);
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
 
@@ -882,8 +929,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const sender = someone;
           const timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -895,7 +940,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, sender, timeLimit, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }
@@ -921,9 +966,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
 
       describe('harvest from with permit', async function() {
-        let wallet;
-        let owner;
-        const sender = someone;
         let timeLimit;
         const deadline = MAX_UINT256;
         let data;
@@ -934,11 +976,8 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          wallet = await web3.eth.accounts.create();
-          owner = wallet.address;
-          await this.fountain.transfer(wallet.address, depositAmount, {
-            from: user,
-          });
+          const owner = user;
+          const sender = someone;
           await increase(seconds(300));
           timeLimit = (await latest()).add(seconds(300));
           const nonce = 0;
@@ -948,25 +987,19 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             domain: { name, version, chainId, verifyingContract },
             message: { owner, sender, timeLimit, nonce, deadline },
           };
-          signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
-            {
-              data,
-            }
-          );
+          signature = ethSigUtil.signTypedMessage(getMnemonicPrivateKey(user), {
+            data,
+          });
         });
 
         it('harvest joined', async function() {
           // user harvest angel1
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingSushi.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel1.address,
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -976,38 +1009,27 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
-          const info1After = await this.angel1.userInfo.call(
-            pid,
-            wallet.address
-          );
-          const pendingAfter = await this.angel1.pendingSushi.call(
-            pid,
-            wallet.address
-          );
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
 
         it('harvest non-joined', async function() {
           // user harvest angel2
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel2.pendingSushi.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel2.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestFromWithPermit(
             this.angel2.address,
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -1017,28 +1039,21 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
               from: someone,
             }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
+          expectEvent(receipt, 'Harvest', [user]);
           const tokenUser = await this.rwdToken2.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken2.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingBefore).to.be.bignumber.eq(ether('0'));
           expect(tokenUser).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
           expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
         });
 
         it('harvest all', async function() {
           // user harvest all
           const { v, r, s } = fromRpcSig(signature);
-          const pendingBefore = await this.angel1.pendingSushi.call(
-            pid,
-            wallet.address
-          );
+          const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
           const receipt = await this.fountain.harvestAllFromWithPermit(
-            wallet.address,
             user,
+            someone,
             timeLimit,
             deadline,
             v,
@@ -1046,25 +1061,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             s,
             { from: someone }
           );
-          expectEvent(receipt, 'Harvest', [wallet.address]);
-          const info1After = await this.angel1.userInfo.call(
-            pid,
-            wallet.address
-          );
-          const pendingAfter = await this.angel1.pendingSushi.call(
-            pid,
-            wallet.address
-          );
+          expectEvent(receipt, 'Harvest', [user]);
+          const info1After = await this.angel1.userInfo.call(pid, user);
+          const pendingAfter = await this.angel1.pendingGrace.call(pid, user);
           const tokenUser = await this.rwdToken1.balanceOf.call(user);
           const tokenSomeone = await this.rwdToken1.balanceOf.call(someone);
-          const tokenOwner = await this.rwdToken1.balanceOf.call(
-            wallet.address
-          );
           expect(pendingAfter).to.be.bignumber.eq(ether('0'));
-          expect(info1After[1]).to.be.bignumber.eq(tokenUser);
-          expect(tokenSomeone).to.be.bignumber.eq(ether('0'));
-          expect(tokenOwner).to.be.bignumber.eq(ether('0'));
-          expect(tokenUser).to.be.bignumber.gte(pendingBefore);
+          expect(info1After[1]).to.be.bignumber.eq(tokenSomeone);
+          expect(tokenUser).to.be.bignumber.eq(ether('0'));
+          expect(tokenSomeone)
+            .to.be.bignumber.gte(pendingBefore)
+            .gt(ether('0'));
         });
       });
     });
@@ -1077,7 +1084,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         await this.angel1.add(
           new BN('1000'),
           this.stkToken.address,
-          ZERO_ADDRESS,
+          this.rewarder.address,
           { from: rewarder }
         );
         // join angel
@@ -1087,18 +1094,64 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           from: user,
         });
         await this.fountain.deposit(depositAmount, { from: user });
-        await increase(seconds(300));
       });
 
-      it('normal', async function() {
+      it('reverting rewarder', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.badRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'bad rewarder'
+        );
+        await increase(seconds(300));
         // check joined angel user balance
-        const pendingBefore = await this.angel1.pendingSushi.call(pid, user);
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         // user emergency withdraw
         const receipt = await this.fountain.emergencyWithdraw({ from: user });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
-        const pending = await this.angel1.pendingSushi.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
+        // check user staking token and reward token amount
+        expect(info1[0]).to.be.bignumber.eq(ether('0'));
+        expect(pending).to.be.bignumber.eq(ether('0'));
+        expect(await this.rwdToken1.balanceOf.call(user)).to.be.bignumber.eq(
+          ether('0')
+        );
+      });
+
+      it('gas monster rewarder', async function() {
+        // Set to bad rewarder
+        await this.angel1.set(
+          new BN('0'),
+          new BN('1000'),
+          this.gasRewarder.address,
+          true,
+          { from: rewarder }
+        );
+        await expectRevert(
+          this.fountain.withdraw(depositAmount, { from: user }),
+          'revert'
+        );
+
+        await increase(seconds(300));
+        // check joined angel user balance
+        const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
+        // user emergency withdraw
+        const receipt = await this.fountain.emergencyWithdraw({ from: user });
+        expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
+        expect(new BN(receipt.receipt.gasUsed)).to.be.bignumber.lt(
+          new BN('1500000')
+        );
+        // check joined angel user balance
+        const info1 = await this.angel1.userInfo.call(pid, user);
+        const pending = await this.angel1.pendingGrace.call(pid, user);
         // check user staking token and reward token amount
         expect(info1[0]).to.be.bignumber.eq(ether('0'));
         expect(pending).to.be.bignumber.eq(ether('0'));
@@ -1150,8 +1203,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const spender = someone;
           const value = depositAmount;
           const nonce = 0;
@@ -1163,7 +1214,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, spender, value, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }
@@ -1191,8 +1242,6 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           const version = '1';
           const chainId = await web3.eth.getChainId();
           const verifyingContract = this.fountain.address;
-          const wallet = await web3.eth.accounts.create();
-          const owner = wallet.address;
           const spender = someone;
           const value = depositAmount;
           const nonce = 0;
@@ -1204,7 +1253,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             message: { owner, spender, value, nonce, deadline },
           };
           const signature = ethSigUtil.signTypedMessage(
-            utils.hexToBytes(wallet.privateKey),
+            getMnemonicPrivateKey(owner),
             {
               data,
             }

@@ -2,8 +2,9 @@
 
 pragma solidity 0.6.12;
 
-import "./libraries/SafeERC20.sol";
-import "./libraries/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
+
 import "./interfaces/IFlashLender.sol";
 
 contract ERC20FlashLoan is IFlashLender {
@@ -13,6 +14,7 @@ contract ERC20FlashLoan is IFlashLender {
     IERC20 public immutable lendingToken;
     uint256 public flashLoanFee;
     uint256 public constant FEE_BASE = 1e4;
+    uint256 public constant FEE_BASE_OFFSET = FEE_BASE / 2;
     bytes32 private constant _RETURN_VALUE =
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
@@ -52,7 +54,8 @@ contract ERC20FlashLoan is IFlashLender {
         returns (uint256)
     {
         require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
-        return amount.mul(flashLoanFee).div(FEE_BASE);
+        // The fee will be rounded half up
+        return (amount.mul(flashLoanFee).add(FEE_BASE_OFFSET)).div(FEE_BASE);
     }
 
     /**
@@ -67,7 +70,7 @@ contract ERC20FlashLoan is IFlashLender {
         address token,
         uint256 amount,
         bytes calldata data
-    ) public override returns (bool) {
+    ) external override returns (bool) {
         uint256 fee = flashFee(token, amount);
         // send token to receiver
         lendingToken.safeTransfer(address(receiver), amount);

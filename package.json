@@ -13,15 +13,19 @@
   "license": "ISC",
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.11",
+    "bip39": "^3.0.4",
     "eth-sig-util": "^3.0.1",
     "ethereumjs-util": "^7.0.10",
+    "ethereumjs-wallet": "^1.0.1",
     "ganache-cli": "^6.11.0",
     "prettier": "1.19.1",
     "prettier-plugin-solidity": "1.0.0-beta.1",
     "solhint": "3.0.0",
     "truffle": "^5.3.9"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@openzeppelin/contracts": "3.4.1"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "npm run lint:prettier && npm run lint:solhint"
