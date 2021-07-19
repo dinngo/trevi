@@ -125,14 +125,19 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         from: rewarder,
       });
       this.angel2 = await getCreated(receipt, Angel);
+      const endTime = (await latest()).add(duration.days(1));
       // Setup angel1
-      await this.angel1.setGracePerSecond(ether('0.01'), { from: rewarder });
-      await this.rwdToken1.transfer(this.angel1.address, ether('10000'), {
+      await this.rwdToken1.approve(this.angel1.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel1.setGracePerSecond(ether('0.01'), endTime, {
         from: rewarder,
       });
       // Setup angel2
-      await this.angel2.setGracePerSecond(ether('0.01'), { from: rewarder });
-      await this.rwdToken2.transfer(this.angel2.address, ether('10000'), {
+      await this.rwdToken2.approve(this.angel2.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel2.setGracePerSecond(ether('0.01'), endTime, {
         from: rewarder,
       });
       // Get fountain
