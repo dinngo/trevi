@@ -541,21 +541,18 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     /// @notice Fetch the token from angel. Can only be called by owner.
-    /// Cannot rescue the reward token.
     /// @param token The token address.
+    /// @param amount The amount of token to be rescued. Replace by current balance if uint256(-1).
     /// @param to The receiver.
     /// @return The transferred amount.
-    function rescueERC20(IERC20 token, address to)
+    function rescueERC20(IERC20 token, uint256 amount, address to)
         external
         onlyOwner
         returns (uint256)
     {
-        _requireMsg(
-            token != GRACE,
-            "rescueERC20",
-            "cannot rescue reward token"
-        );
-        uint256 amount = token.balanceOf(address(this));
+        if(amount == type(uint256).max){
+            amount = token.balanceOf(address(this));
+        }
         token.safeTransfer(to, amount);
 
         return amount;

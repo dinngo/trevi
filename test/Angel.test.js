@@ -1274,7 +1274,18 @@ contract('Angel', function([_, user, rewarder]) {
 
     it('normal', async function() {
       const tokenUser = await this.dummy.balanceOf.call(user);
-      await this.angel.rescueERC20(this.dummy.address, user, {
+      const rescueAmount = amount.sub(new BN('1'));
+      await this.angel.rescueERC20(this.dummy.address, rescueAmount, user, {
+        from: rewarder,
+      });
+      expect(await this.dummy.balanceOf.call(user)).to.be.bignumber.eq(
+        tokenUser.add(rescueAmount)
+      );
+    });
+
+    it('max amount', async function() {
+      const tokenUser = await this.dummy.balanceOf.call(user);
+      await this.angel.rescueERC20(this.dummy.address, MAX_UINT256, user, {
         from: rewarder,
       });
       expect(await this.dummy.balanceOf.call(user)).to.be.bignumber.eq(
@@ -1283,17 +1294,18 @@ contract('Angel', function([_, user, rewarder]) {
     });
 
     it('rescue reward', async function() {
-      await expectRevert(
-        this.angel.rescueERC20(this.rwdToken.address, user, {
-          from: rewarder,
-        }),
-        'cannot rescue reward token'
+      const tokenUser = await this.rwdToken.balanceOf.call(user);
+      await this.angel.rescueERC20(this.rwdToken.address, amount, user, {
+        from: rewarder,
+      });
+      expect(await this.rwdToken.balanceOf.call(user)).to.be.bignumber.eq(
+        tokenUser.add(amount)
       );
     });
 
     it('from not owner', async function() {
       await expectRevert(
-        this.angel.rescueERC20(this.dummy.address, user),
+        this.angel.rescueERC20(this.dummy.address, amount, user),
         'caller is not the owner'
       );
     });
