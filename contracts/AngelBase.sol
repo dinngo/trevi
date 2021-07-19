@@ -105,7 +105,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 lpSupply,
         uint256 accGracePerShare
     );
-    event LogGracePerSecond(uint256 gracePerSecond);
+    event LogGracePerSecondAndEndTime(uint256 gracePerSecond, uint256 endTime);
 
     modifier onlyFountain(uint256 pid) {
         _requireMsg(
@@ -237,11 +237,10 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             "new grace per second exceeds uint128"
         );
         gracePerSecond = newGracePerSecond;
-        emit LogGracePerSecond(gracePerSecond);
         endTime = _endTime;
+        emit LogGracePerSecondAndEndTime(gracePerSecond, endTime);
 
         GRACE.safeTransferFrom(msg.sender, address(this), _amount);
-        // TODO: add event?
     }
 
     /// @notice Set the grace per second to be distributed. Can only be called by the owner.
@@ -272,13 +271,12 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             uint256 leftover = remaining.mul(gracePerSecond);
             if (rewardNeeded > leftover) shortage = rewardNeeded.sub(leftover);
         }
-        endTime = _endTime;
         gracePerSecond = _gracePerSecond;
-        emit LogGracePerSecond(_gracePerSecond);
+        endTime = _endTime;
+        emit LogGracePerSecondAndEndTime(gracePerSecond, endTime);
 
         if (shortage > 0)
             GRACE.safeTransferFrom(msg.sender, address(this), shortage);
-        // TODO: add event?
     }
 
     /// @notice View function to see pending GRACE on frontend.
@@ -545,12 +543,12 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @param amount The amount of token to be rescued. Replace by current balance if uint256(-1).
     /// @param to The receiver.
     /// @return The transferred amount.
-    function rescueERC20(IERC20 token, uint256 amount, address to)
-        external
-        onlyOwner
-        returns (uint256)
-    {
-        if(amount == type(uint256).max){
+    function rescueERC20(
+        IERC20 token,
+        uint256 amount,
+        address to
+    ) external onlyOwner returns (uint256) {
+        if (amount == type(uint256).max) {
             amount = token.balanceOf(address(this));
         }
         token.safeTransfer(to, amount);

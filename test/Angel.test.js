@@ -616,8 +616,16 @@ contract('Angel', function([_, user, rewarder]) {
       await this.rwdToken.approve(this.angel.address, rewardAmount, {
         from: rewarder,
       });
-      await this.angel.addGraceReward(rewardAmount, rewardEndTimeTemp, {
-        from: rewarder,
+      const receipt = await this.angel.addGraceReward(
+        rewardAmount,
+        rewardEndTimeTemp,
+        {
+          from: rewarder,
+        }
+      );
+      expectEvent(receipt, 'LogGracePerSecondAndEndTime', {
+        // gracePerSecond: newRewardRate, // skip verification since inaccuracy
+        endTime: rewardEndTimeTemp,
       });
       expect(await this.rwdToken.balanceOf.call(rewarder)).to.be.bignumber.eq(
         tokenBalanceRewarder.sub(rewardAmount)
@@ -746,8 +754,16 @@ contract('Angel', function([_, user, rewarder]) {
       await this.rwdToken.approve(this.angel.address, rewardShortage, {
         from: rewarder,
       });
-      await this.angel.setGracePerSecond(newRewardRate, rewardEndTimeTemp, {
-        from: rewarder,
+      const receipt = await this.angel.setGracePerSecond(
+        newRewardRate,
+        rewardEndTimeTemp,
+        {
+          from: rewarder,
+        }
+      );
+      expectEvent(receipt, 'LogGracePerSecondAndEndTime', {
+        gracePerSecond: newRewardRate,
+        endTime: rewardEndTimeTemp,
       });
       expectEqWithinBps(
         await this.rwdToken.balanceOf.call(rewarder),
