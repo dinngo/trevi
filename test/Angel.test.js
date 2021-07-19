@@ -42,6 +42,9 @@ contract('Angel', function([_, user, rewarder]) {
     this.dummy = await SimpleToken.new('Reward', 'RWD', ether('1000000'), {
       from: rewarder,
     });
+    this.dummy2 = await SimpleToken.new('Dummy2', 'DMY2', ether('1000000'), {
+      from: rewarder,
+    });
     // create fountain
     this.fountain = await getCreated(
       await this.fountainFactory.create(this.stkToken.address),
@@ -119,6 +122,90 @@ contract('Angel', function([_, user, rewarder]) {
         rewarder: this.dummy.address,
         overwrite: true,
       });
+    });
+
+    it('Should update non-zero pool when the flag is NOT set', async function() {
+      // create fountain for new pools
+      await this.fountainFactory.create(this.dummy.address);
+      await this.fountainFactory.create(this.dummy2.address);
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool1 with allocPoint = 0
+      await this.angel.add(0, this.dummy.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool2 with allocPoint = 0
+      await this.angel.add(0, this.dummy2.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      const lastRewardTimePool1 = (await this.angel.poolInfo.call(1))
+        .lastRewardTime;
+      const lastRewardTimePool2 = (await this.angel.poolInfo.call(2))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool2
+      await this.angel.set(2, 0, this.rewarder.address, false, {
+        from: rewarder,
+      });
+      // pool0 should be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool0);
+      // pool1 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(1)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool1);
+      // pool2 should be updated because it's the one being set
+      expect(
+        (await this.angel.poolInfo.call(2)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool2);
+    });
+
+    it('Should NOT update non-zero pool when the flag is set', async function() {
+      // create fountain for new pools
+      await this.fountainFactory.create(this.dummy.address);
+      await this.fountainFactory.create(this.dummy2.address);
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool1 with allocPoint = 0
+      await this.angel.add(0, this.dummy.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool2 with allocPoint = 0
+      await this.angel.add(0, this.dummy2.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      const lastRewardTimePool1 = (await this.angel.poolInfo.call(1))
+        .lastRewardTime;
+      const lastRewardTimePool2 = (await this.angel.poolInfo.call(2))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // Set the flag without updating any pool
+      await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+      // Set pool2 allocPoint to zero, nothing should change except for lastRewardTime of pool1
+      await this.angel.set(2, 0, this.rewarder.address, false, {
+        from: rewarder,
+      });
+      // pool0 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool0);
+      // pool1 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(1)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool1);
+      // pool2 should be updated because it's the one being set
+      expect(
+        (await this.angel.poolInfo.call(2)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool2);
     });
 
     it('Should revert if invalid pool', async function() {
@@ -540,6 +627,58 @@ contract('Angel', function([_, user, rewarder]) {
       expectEqWithinBps(await this.angel.gracePerSecond.call(), newRewardRate);
     });
 
+    it('Should update non-zero pool when the flag is NOT set', async function() {
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // execute addGraceReward
+      await this.rwdToken.approve(this.angel.address, ether('1'), {
+        from: rewarder,
+      });
+      await this.angel.addGraceReward(
+        ether('1'),
+        (await latest()).add(new BN('10')),
+        {
+          from: rewarder,
+        }
+      );
+      // pool0 should be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool0);
+    });
+
+    it('Should NOT update non-zero pool when the flag is set', async function() {
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // Set the flag without updating any pool
+      await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+      // execute addGraceReward
+      await this.rwdToken.approve(this.angel.address, ether('1'), {
+        from: rewarder,
+      });
+      await this.angel.addGraceReward(
+        ether('1'),
+        (await latest()).add(new BN('10')),
+        {
+          from: rewarder,
+        }
+      );
+      // pool0 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool0);
+    });
+
     it('New gracePerSecond exceeds limit', async function() {
       // Forward to skip leftover
       await increase(duration.days(10));
@@ -622,6 +761,58 @@ contract('Angel', function([_, user, rewarder]) {
         newRewardRate,
         0
       );
+    });
+
+    it('Should update non-zero pool when the flag is NOT set', async function() {
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // execute setGracePerSecond
+      await this.rwdToken.approve(this.angel.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel.setGracePerSecond(
+        new BN('1'),
+        (await latest()).add(new BN('10')),
+        {
+          from: rewarder,
+        }
+      );
+      // pool0 should be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool0);
+    });
+
+    it('Should NOT update non-zero pool when the flag is set', async function() {
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // Set the flag without updating any pool
+      await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+      // execute setGracePerSecond
+      await this.rwdToken.approve(this.angel.address, MAX_UINT256, {
+        from: rewarder,
+      });
+      await this.angel.setGracePerSecond(
+        new BN('1'),
+        (await latest()).add(new BN('10')),
+        {
+          from: rewarder,
+        }
+      );
+      // pool0 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool0);
     });
 
     it('New gracePerSecond exceeds limit', async function() {
@@ -792,6 +983,70 @@ contract('Angel', function([_, user, rewarder]) {
           rewarder: this.rewarder.address,
         }
       );
+    });
+
+    it('Should update non-zero pool when the flag is NOT set', async function() {
+      // create fountain for new pools
+      await this.fountainFactory.create(this.dummy.address);
+      await this.fountainFactory.create(this.dummy2.address);
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool1 with allocPoint = 0
+      await this.angel.add(0, this.dummy.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      const lastRewardTimePool1 = (await this.angel.poolInfo.call(1))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // execute add
+      await this.angel.add(0, this.dummy2.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool0 should be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.gt(lastRewardTimePool0);
+      // pool1 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(1)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool1);
+    });
+
+    it('Should NOT update non-zero pool when the flag is set', async function() {
+      // create fountain for new pools
+      await this.fountainFactory.create(this.dummy.address);
+      await this.fountainFactory.create(this.dummy2.address);
+      // pool0 with allocPoint = 10
+      await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool1 with allocPoint = 0
+      await this.angel.add(0, this.dummy.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      const lastRewardTimePool0 = (await this.angel.poolInfo.call(0))
+        .lastRewardTime;
+      const lastRewardTimePool1 = (await this.angel.poolInfo.call(1))
+        .lastRewardTime;
+      await increase(duration.days(1));
+      // Set the flag without updating any pool
+      await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+      // execute add
+      await this.angel.add(0, this.dummy2.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      // pool0 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(0)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool0);
+      // pool1 should not be updated
+      expect(
+        (await this.angel.poolInfo.call(1)).lastRewardTime
+      ).to.be.bignumber.eq(lastRewardTimePool1);
     });
 
     it('Not owner', async function() {
