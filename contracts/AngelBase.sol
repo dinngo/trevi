@@ -326,13 +326,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         }
     }
 
-    /// @notice Update reward variables for all pools with non-zero allocPoint.
-    /// Be careful of gas spending! Can only be called by the owner.
-    function massUpdatePoolsNonZeroAndSet() external onlyOwner {
-        massUpdatePoolsNonZero();
-        massUpdated = true;
-    }
-
     /// @notice Update reward variables for all pools. Be careful of gas spending!
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
     function massUpdatePools(uint256[] memory pids) public {
@@ -342,8 +335,9 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         }
     }
 
-    /// @notice Update reward variables for all pools and set the flag.
-    /// Be careful of gas spending! Can only be called by the owner.
+    /// @notice Update reward variables for all pools and set the flag. Be careful of gas spending! Can only be called by the owner.
+    /// DO NOT use this function until `massUpdatePoolsNonZero()` reverts because of out of gas.
+    /// If that is the case, try to update all pools first and then call onlyOwner function to set a correct state.
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
     function massUpdatePoolsAndSet(uint256[] calldata pids) external onlyOwner {
         massUpdatePools(pids);
