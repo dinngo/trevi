@@ -3,6 +3,8 @@
 pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/math/Math.sol";
+
 import "./libraries/boringcrypto/libraries/BoringMath.sol";
 import "./libraries/boringcrypto/BoringBatchable.sol";
 import "./libraries/boringcrypto/BoringOwnable.sol";
@@ -63,6 +65,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     ////////////////////////// New
     IArchangel public immutable archangel;
     IAngelFactory public immutable factory;
+    uint256 public endTime;
+    uint256 private _skipOwnerMassUpdateUntil;
 
     event Deposit(
         address indexed user,
@@ -101,7 +105,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 lpSupply,
         uint256 accGracePerShare
     );
-    event LogGracePerSecond(uint256 gracePerSecond);
+    event LogGracePerSecondAndEndTime(uint256 gracePerSecond, uint256 endTime);
 
     modifier onlyFountain(uint256 pid) {
         _requireMsg(
@@ -110,6 +114,13 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             "not called by correct fountain"
         );
         _;
+    }
+
+    modifier ownerMassUpdate() {
+        if (block.timestamp > _skipOwnerMassUpdateUntil)
+            massUpdatePoolsNonZero();
+        _;
+        _skipOwnerMassUpdateUntil = block.timestamp;
     }
 
     /// @param _grace The GRACE token contract address.
@@ -125,8 +136,12 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     /// @notice Returns the number of MCV2 pools.
-    function poolLength() external view returns (uint256 pools) {
+    function poolLength() public view returns (uint256 pools) {
         pools = poolInfo.length;
+    }
+
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return Math.min(block.timestamp, endTime);
     }
 
     /// @notice Add a new LP to the pool. Can only be called by the owner.
@@ -138,7 +153,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 allocPoint,
         IERC20 _lpToken,
         IRewarder _rewarder
-    ) external onlyOwner {
+    ) external onlyOwner ownerMassUpdate {
         uint256 pid = lpToken.length;
 
         totalAllocPoint = totalAllocPoint.add(allocPoint);
@@ -171,7 +186,8 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         uint256 _allocPoint,
         IRewarder _rewarder,
         bool overwrite
-    ) external onlyOwner {
+    ) external onlyOwner ownerMassUpdate {
+        updatePool(_pid);
         totalAllocPoint = totalAllocPoint.sub(poolInfo[_pid].allocPoint).add(
             _allocPoint
         );
@@ -187,11 +203,80 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         );
     }
 
-    /// @notice Sets the grace per second to be distributed. Can only be called by the owner.
+    /// @notice Add extra amount of GRACE to be distributed and the end time. Can only be called by the owner.
+    /// @param _amount The extra amount of GRACE to be distributed.
+    /// @param _endTime UNIX timestamp that indicates the end of the calculating period.
+    function addGraceReward(uint256 _amount, uint256 _endTime)
+        external
+        onlyOwner
+        ownerMassUpdate
+    {
+        _requireMsg(
+            _amount > 0,
+            "addGraceReward",
+            "grace amount should be greater than 0"
+        );
+        _requireMsg(
+            _endTime > block.timestamp,
+            "addGraceReward",
+            "end time should be in the future"
+        );
+
+        uint256 duration = _endTime.sub(block.timestamp);
+        uint256 newGracePerSecond;
+        if (block.timestamp >= endTime) {
+            newGracePerSecond = _amount / duration;
+        } else {
+            uint256 remaining = endTime.sub(block.timestamp);
+            uint256 leftover = remaining.mul(gracePerSecond);
+            newGracePerSecond = leftover.add(_amount) / duration;
+        }
+        _requireMsg(
+            newGracePerSecond <= type(uint128).max,
+            "addGraceReward",
+            "new grace per second exceeds uint128"
+        );
+        gracePerSecond = newGracePerSecond;
+        endTime = _endTime;
+        emit LogGracePerSecondAndEndTime(gracePerSecond, endTime);
+
+        GRACE.safeTransferFrom(msg.sender, address(this), _amount);
+    }
+
+    /// @notice Set the grace per second to be distributed. Can only be called by the owner.
     /// @param _gracePerSecond The amount of Grace to be distributed per second.
-    function setGracePerSecond(uint256 _gracePerSecond) external onlyOwner {
+    function setGracePerSecond(uint256 _gracePerSecond, uint256 _endTime)
+        external
+        onlyOwner
+        ownerMassUpdate
+    {
+        _requireMsg(
+            _gracePerSecond <= type(uint128).max,
+            "setGracePerSecond",
+            "new grace per second exceeds uint128"
+        );
+        _requireMsg(
+            _endTime > block.timestamp,
+            "setGracePerSecond",
+            "end time should be in the future"
+        );
+
+        uint256 duration = _endTime.sub(block.timestamp);
+        uint256 rewardNeeded = _gracePerSecond.mul(duration);
+        uint256 shortage;
+        if (block.timestamp >= endTime) {
+            shortage = rewardNeeded;
+        } else {
+            uint256 remaining = endTime.sub(block.timestamp);
+            uint256 leftover = remaining.mul(gracePerSecond);
+            if (rewardNeeded > leftover) shortage = rewardNeeded.sub(leftover);
+        }
         gracePerSecond = _gracePerSecond;
-        emit LogGracePerSecond(_gracePerSecond);
+        endTime = _endTime;
+        emit LogGracePerSecondAndEndTime(gracePerSecond, endTime);
+
+        if (shortage > 0)
+            GRACE.safeTransferFrom(msg.sender, address(this), shortage);
     }
 
     /// @notice View function to see pending GRACE on frontend.
@@ -212,8 +297,13 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IFountain fountain =
             IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
-        if (block.timestamp > pool.lastRewardTime && lpSupply != 0) {
-            uint256 time = block.timestamp.sub(pool.lastRewardTime);
+        uint256 _lastTimeRewardApplicable = lastTimeRewardApplicable();
+        if (
+            lpSupply != 0 &&
+            pool.allocPoint > 0 &&
+            _lastTimeRewardApplicable > pool.lastRewardTime
+        ) {
+            uint256 time = _lastTimeRewardApplicable.sub(pool.lastRewardTime);
             uint256 graceReward =
                 time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
             accGracePerShare = accGracePerShare.add(
@@ -227,13 +317,33 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             .toUInt256();
     }
 
+    /// @notice Update reward variables for all pools with non-zero allocPoint.
+    /// Be careful of gas spending!
+    function massUpdatePoolsNonZero() public {
+        uint256 len = poolLength();
+        for (uint256 i = 0; i < len; ++i) {
+            if (poolInfo[i].allocPoint > 0) updatePool(i);
+        }
+    }
+
     /// @notice Update reward variables for all pools. Be careful of gas spending!
     /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
-    function massUpdatePools(uint256[] calldata pids) external {
+    function massUpdatePools(uint256[] memory pids) public {
         uint256 len = pids.length;
         for (uint256 i = 0; i < len; ++i) {
             updatePool(pids[i]);
         }
+    }
+
+    /// @notice Update reward variables for all pools and set the expire time for skipping `massUpdatePoolsNonZero()`.
+    /// Be careful of gas spending! Can only be called by the owner.
+    /// DO NOT use this function until `massUpdatePoolsNonZero()` reverts because of out of gas.
+    /// If that is the case, try to update all pools first and then call onlyOwner function to set a correct state.
+    /// @param pids Pool IDs of all to be updated. Make sure to update all active pools.
+    function massUpdatePoolsAndSet(uint256[] calldata pids) external onlyOwner {
+        massUpdatePools(pids);
+        // Leave an hour for owner to be able to skip `massUpdatePoolsNonZero()`
+        _skipOwnerMassUpdateUntil = block.timestamp.add(3600);
     }
 
     /// @notice Update reward variables of the given pool.
@@ -248,8 +358,15 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             IFountain fountain =
                 IFountain(archangel.getFountain(address(lpToken[pid])));
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
-            if (lpSupply > 0) {
-                uint256 time = block.timestamp.sub(pool.lastRewardTime);
+            uint256 _lastTimeRewardApplicable = lastTimeRewardApplicable();
+            // Only accumulate reward before end time
+            if (
+                lpSupply > 0 &&
+                pool.allocPoint > 0 &&
+                _lastTimeRewardApplicable > pool.lastRewardTime
+            ) {
+                uint256 time =
+                    _lastTimeRewardApplicable.sub(pool.lastRewardTime);
                 uint256 graceReward =
                     time.mul(gracePerSecond).mul(pool.allocPoint) /
                         totalAllocPoint;
@@ -424,21 +541,18 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     /// @notice Fetch the token from angel. Can only be called by owner.
-    /// Cannot rescue the reward token.
     /// @param token The token address.
+    /// @param amount The amount of token to be rescued. Replace by current balance if uint256(-1).
     /// @param to The receiver.
     /// @return The transferred amount.
-    function rescueERC20(IERC20 token, address to)
-        external
-        onlyOwner
-        returns (uint256)
-    {
-        _requireMsg(
-            token != GRACE,
-            "rescueERC20",
-            "cannot rescue reward token"
-        );
-        uint256 amount = token.balanceOf(address(this));
+    function rescueERC20(
+        IERC20 token,
+        uint256 amount,
+        address to
+    ) external onlyOwner returns (uint256) {
+        if (amount == type(uint256).max) {
+            amount = token.balanceOf(address(this));
+        }
         token.safeTransfer(to, amount);
 
         return amount;
