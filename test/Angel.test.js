@@ -669,22 +669,107 @@ contract('Angel', function([_, user, rewarder]) {
     });
   });
 
-  describe('MassUpdatePools', function() {
-    it('Should call updatePool', async function() {
+  describe('MassUpdatePools Family', function() {
+    beforeEach(async function() {
+      // create fountain for zero allocPoint pool
+      await this.fountainFactory.create(this.dummy.address);
+      // pool0 with allocPoint = 10
       await this.angel.add(10, this.stkToken.address, this.rewarder.address, {
         from: rewarder,
       });
-      await advanceBlockTo((await latestBlock()).add(new BN('1')));
-      await this.angel.massUpdatePools([0]);
-      //expect('updatePool').to.be.calledOnContract(); //not suported by heardhat
-      //expect('updatePool').to.be.calledOnContractWith(0); //not suported by heardhat
+      // pool1 with allocPoint = 0
+      await this.angel.add(0, this.dummy.address, this.rewarder.address, {
+        from: rewarder,
+      });
+      this.lastRewardTimePool0 = (
+        await this.angel.poolInfo.call(0)
+      ).lastRewardTime;
+      this.lastRewardTimePool1 = (
+        await this.angel.poolInfo.call(1)
+      ).lastRewardTime;
     });
 
-    it('Updating invalid pools should fail', async function() {
-      await expectRevert(
-        this.angel.massUpdatePools([0, 10000, 100000]),
-        'invalid opcode'
-      );
+    describe('MassUpdatePools', function() {
+      it('normal', async function() {
+        await increase(duration.days(1));
+        await this.angel.massUpdatePools([1]);
+        expect(
+          (await this.angel.poolInfo.call(0)).lastRewardTime
+        ).to.be.bignumber.eq(this.lastRewardTimePool0);
+        expect(
+          (await this.angel.poolInfo.call(1)).lastRewardTime
+        ).to.be.bignumber.gt(this.lastRewardTimePool1);
+      });
+
+      it('should call updatePool', async function() {
+        await advanceBlockTo((await latestBlock()).add(new BN('1')));
+        await this.angel.massUpdatePools([0]);
+        //expect('updatePool').to.be.calledOnContract(); //not suported by heardhat
+        //expect('updatePool').to.be.calledOnContractWith(0); //not suported by heardhat
+      });
+
+      it('updating invalid pools should fail', async function() {
+        await expectRevert(
+          this.angel.massUpdatePools([0, 10000, 100000]),
+          'invalid opcode'
+        );
+      });
+    });
+
+    describe('MassUpdatePoolsAndSet', function() {
+      it('normal', async function() {
+        await increase(duration.days(1));
+        await this.angel.massUpdatePoolsAndSet([1], { from: rewarder });
+        expect(
+          (await this.angel.poolInfo.call(0)).lastRewardTime
+        ).to.be.bignumber.eq(this.lastRewardTimePool0);
+        expect(
+          (await this.angel.poolInfo.call(1)).lastRewardTime
+        ).to.be.bignumber.gt(this.lastRewardTimePool1);
+      });
+
+      it('skip non-zero mass update when flag is set', async function() {
+        await increase(duration.days(1));
+        // Set the flag without updating any pool
+        await this.angel.massUpdatePoolsAndSet([], { from: rewarder });
+        // Set pool with zero allocPoint to zero, nothing should change except for lastRewardTime of pool1
+        await this.angel.set(1, 0, this.rewarder.address, false, {
+          from: rewarder,
+        });
+        // Pool0 should not be updated
+        expect(
+          (await this.angel.poolInfo.call(0)).lastRewardTime
+        ).to.be.bignumber.eq(this.lastRewardTimePool0);
+      });
+
+      it('updating invalid pools should fail', async function() {
+        await expectRevert(
+          this.angel.massUpdatePoolsAndSet([0, 10000, 100000], {
+            from: rewarder,
+          }),
+          'invalid opcode'
+        );
+      });
+
+      it('not owner', async function() {
+        await expectRevert(
+          this.angel.massUpdatePoolsAndSet([1], { from: user }),
+          'Ownable: caller is not the owner'
+        );
+      });
+    });
+
+    describe('MassUpdatePoolsNonZero', function() {
+      it('normal', async function() {
+        await increase(duration.days(1));
+        await this.angel.massUpdatePoolsNonZero();
+        expect(
+          (await this.angel.poolInfo.call(0)).lastRewardTime
+        ).to.be.bignumber.gt(this.lastRewardTimePool0);
+        expect(
+          (await this.angel.poolInfo.call(1)).lastRewardTime
+        ).to.be.bignumber.eq(this.lastRewardTimePool1);
+      });
     });
   });
 
