@@ -251,14 +251,14 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         ownerMassUpdate
     {
         _requireMsg(
-            _endTime > block.timestamp,
-            "setGracePerSecond",
-            "end time should be in the future"
-        );
-        _requireMsg(
             _gracePerSecond <= type(uint128).max,
             "setGracePerSecond",
             "new grace per second exceeds uint128"
+        );
+        _requireMsg(
+            _endTime > block.timestamp,
+            "setGracePerSecond",
+            "end time should be in the future"
         );
 
         uint256 duration = _endTime.sub(block.timestamp);
