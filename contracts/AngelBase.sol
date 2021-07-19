@@ -297,12 +297,13 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         IFountain fountain =
             IFountain(archangel.getFountain(address(lpToken[_pid])));
         (, uint256 lpSupply) = fountain.angelInfo(address(this));
+        uint256 _lastTimeRewardApplicable = lastTimeRewardApplicable();
         if (
             lpSupply != 0 &&
             pool.allocPoint > 0 &&
-            lastTimeRewardApplicable() > pool.lastRewardTime
+            _lastTimeRewardApplicable > pool.lastRewardTime
         ) {
-            uint256 time = lastTimeRewardApplicable().sub(pool.lastRewardTime);
+            uint256 time = _lastTimeRewardApplicable.sub(pool.lastRewardTime);
             uint256 graceReward =
                 time.mul(gracePerSecond).mul(pool.allocPoint) / totalAllocPoint;
             accGracePerShare = accGracePerShare.add(
@@ -357,14 +358,15 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             IFountain fountain =
                 IFountain(archangel.getFountain(address(lpToken[pid])));
             (, uint256 lpSupply) = fountain.angelInfo(address(this));
+            uint256 _lastTimeRewardApplicable = lastTimeRewardApplicable();
             // Only accumulate reward before end time
             if (
                 lpSupply > 0 &&
                 pool.allocPoint > 0 &&
-                lastTimeRewardApplicable() > pool.lastRewardTime
+                _lastTimeRewardApplicable > pool.lastRewardTime
             ) {
                 uint256 time =
-                    lastTimeRewardApplicable().sub(pool.lastRewardTime);
+                    _lastTimeRewardApplicable.sub(pool.lastRewardTime);
                 uint256 graceReward =
                     time.mul(gracePerSecond).mul(pool.allocPoint) /
                         totalAllocPoint;
