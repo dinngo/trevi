@@ -21,10 +21,12 @@ Angels give their blessings to people. Rewarders may manage their rewards schedu
 ### AngelFactory
 Only the angel that is created from AngelFactory can be applied in Trevi. Each token can have multiple angels being created. Anyone can create an angel.
 ### Angel
-Angel is a forked version of [MiniChefV2](https://github.com/sushiswap/sushiswap/blob/canary/contracts/MiniChefV2.sol) from [Sushiswap](https://github.com/sushiswap/sushiswap). All the functions remain the same except:
+Angel is a forked version of [MiniChefV2](https://github.com/sushiswap/sushiswap/blob/canary/contracts/MiniChefV2.sol) from [Sushiswap](https://github.com/sushiswap/sushiswap). Most of the functions remain the same except:
 - Staking tokens are located in fountain.
 - Deposit / Withdraw / Harvest / EmergencyWithdraw can only be called from corresponding fountain.
 - Migrate related functions and harvestAndWithdraw are removed.
+- `gracePerSecond` settlement.
+- Necessary modifications to apply to Trevi.
 
 #### FlashLoan
 The assets in the angel can be flashLoaned by user, which is implemented through [ERC-3156](https://eips.ethereum.org/EIPS/eip-3156). The fee rate is set through [Archangel](#archangel), and fee is collected at [Archangel](#archangel). 
