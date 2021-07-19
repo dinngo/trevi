@@ -136,7 +136,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     }
 
     /// @notice Returns the number of MCV2 pools.
-    function poolLength() external view returns (uint256 pools) {
+    function poolLength() public view returns (uint256 pools) {
         pools = poolInfo.length;
     }
 
