@@ -320,8 +320,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
     /// @notice Update reward variables for all pools with non-zero allocPoint.
     /// Be careful of gas spending!
     function massUpdatePoolsNonZero() public {
-        uint256 len = lpToken.length;
-        for (uint256 i = 0; i < len; ++i) {
+        for (uint256 i = 0; i < poolLength(); ++i) {
             if (poolInfo[i].allocPoint > 0) updatePool(i);
         }
     }
