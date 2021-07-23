@@ -2,15 +2,15 @@
   "name": "unichef",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "",
   "scripts": {
     "build": "truffle compile",
     "test": "scripts/test.sh --network development",
     "lint:solhint": "solhint \"contracts/**/*.sol\"",
     "lint:prettier": "scripts/prettier.sh"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "DINNGO",
+  "license": "MIT",
   "devDependencies": {
     "@openzeppelin/test-helpers": "^0.5.11",
     "bip39": "^3.0.4",
