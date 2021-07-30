@@ -131,10 +131,6 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
         archangel = IArchangel(_f.archangel());
     }
 
-    function getContractName() public pure override returns (string memory) {
-        return "Angel";
-    }
-
     /// @notice Returns the number of MCV2 pools.
     function poolLength() public view returns (uint256 pools) {
         pools = poolInfo.length;
