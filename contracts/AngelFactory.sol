@@ -22,11 +22,6 @@ contract AngelFactory is ErrorMsg {
     }
 
     // Getters
-    /// @notice Return contract name for error message.
-    function getContractName() public pure override returns (string memory) {
-        return "AngelFactory";
-    }
-
     /// @notice Check if angel is valid.
     /// @param angel The angel to be verified.
     /// @return Is valid or not.

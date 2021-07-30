@@ -55,11 +55,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     }
 
     // Getters
-    /// @notice Return contract name for error message.
-    function getContractName() public pure override returns (string memory) {
-        return "Fountain";
-    }
-
     /// @notice Return the angels that user joined.
     /// @param user The user address.
     /// @return The angel list.
@@ -74,7 +69,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @return The total balance deposited in angel.
     function angelInfo(IAngel angel) external view returns (uint256, uint256) {
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(info.isSet, "angelInfo", "Fountain: angel not set");
+        _requireMsg(info.isSet, "angelInfo", "angel not set");
         return (info.pid, info.totalBalance);
     }
 
@@ -85,11 +80,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     function setPoolId(uint256 pid) external {
         IAngel angel = IAngel(_msgSender());
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(!info.isSet, "setPoolId", "Fountain: angel is set");
+        _requireMsg(!info.isSet, "setPoolId", "angel is set");
         _requireMsg(
             angel.lpToken(pid) == address(stakingToken),
             "setPoolId",
-            "Fountain: token not matched"
+            "token not matched"
         );
         info.isSet = true;
         info.pid = pid;
@@ -101,13 +96,13 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// stay in Fountain.
     /// @param amount The amount to be deposited.
     function deposit(uint256 amount) external nonReentrant {
-        // Mint token
-        _mint(_msgSender(), amount);
-
         // Transfer user staking token
-        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+        uint256 balance = _deposit(amount);
 
-        emit Deposit(_msgSender(), amount, _msgSender());
+        // Mint token
+        _mint(_msgSender(), balance);
+
+        emit Deposit(_msgSender(), balance, _msgSender());
     }
 
     // User action
@@ -117,12 +112,13 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @param amount The amount to be deposited.
     /// @param to The address to be deposited.
     function depositTo(uint256 amount, address to) external nonReentrant {
-        // Mint token
-        _mint(to, amount);
-
         // Transfer user staking token
-        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
-        emit Deposit(_msgSender(), amount, to);
+        uint256 balance = _deposit(amount);
+
+        // Mint token
+        _mint(to, balance);
+
+        emit Deposit(_msgSender(), balance, to);
     }
 
     /// @notice User may withdraw their lp token. FTN token will be burned.
@@ -130,15 +126,11 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// will be transferred from Fountain.
     /// @param amount The amount to be withdrawn.
     function withdraw(uint256 amount) external nonReentrant {
-        // Withdraw entire balance if amount == UINT256_MAX
-        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+        uint256 balance = _withdraw(amount, _msgSender());
 
         // Burn token
-        _burn(_msgSender(), amount);
-
-        // Transfer user staking token
-        stakingToken.safeTransfer(_msgSender(), amount);
-        emit Withdraw(_msgSender(), amount, _msgSender());
+        _burn(_msgSender(), balance);
+        emit Withdraw(_msgSender(), balance, _msgSender());
     }
 
     /// @notice User may withdraw their lp token. FTN token will be burned.
@@ -147,15 +139,12 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @param amount The amount to be withdrawn.
     /// @param to The address to sent the withdrawn balance to.
     function withdrawTo(uint256 amount, address to) external nonReentrant {
-        // Withdraw entire balance if amount == UINT256_MAX
-        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+        uint256 balance = _withdraw(amount, to);
 
         // Burn token
-        _burn(_msgSender(), amount);
+        _burn(_msgSender(), balance);
 
-        // Transfer user staking token
-        stakingToken.safeTransfer(to, amount);
-        emit Withdraw(_msgSender(), amount, to);
+        emit Withdraw(_msgSender(), balance, to);
     }
 
     /// @notice User may harvest from any angel.
@@ -179,13 +168,12 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @notice Emergency withdraw all tokens.
     function emergencyWithdraw() external nonReentrant {
         uint256 amount = balanceOf(_msgSender());
+        uint256 balance = _withdraw(amount, _msgSender());
 
         // Burn token
         _burn(_msgSender(), type(uint256).max);
 
-        // Transfer user staking token
-        stakingToken.safeTransfer(_msgSender(), amount);
-        emit EmergencyWithdraw(_msgSender(), amount, _msgSender());
+        emit EmergencyWithdraw(_msgSender(), balance, _msgSender());
     }
 
     /// @notice Join the given angel's program.
@@ -284,6 +272,24 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         }
     }
 
+    /// @notice Return the actual token amount deposited to Fountain to prevent
+    /// inconsistency of desired amount and transferred amount.
+    function _deposit(uint256 amount) internal returns (uint256) {
+        uint256 balance = stakingToken.balanceOf(address(this));
+        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+        return stakingToken.balanceOf(address(this)).sub(balance);
+    }
+
+    /// @notice Return the actual token amount withdrawn from Fountain to prevent
+    /// inconsistency of desired amount and transferred amount.
+    function _withdraw(uint256 amount, address to) internal returns (uint256) {
+        // Withdraw entire balance if amount == UINT256_MAX
+        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+        uint256 balance = stakingToken.balanceOf(address(this));
+        stakingToken.safeTransfer(to, amount);
+        return balance.sub(stakingToken.balanceOf(address(this)));
+    }
+
     /// @notice The total staked amount should be updated in angelInfo when
     /// token is being deposited/withdrawn.
     function _depositAngel(
@@ -292,11 +298,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         uint256 amount
     ) internal {
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(
-            info.isSet,
-            "_depositAngel",
-            "Fountain: not added by angel"
-        );
+        _requireMsg(info.isSet, "_depositAngel", "not added by angel");
         angel.deposit(info.pid, amount, user);
         info.totalBalance = info.totalBalance.add(amount);
     }
@@ -307,11 +309,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         uint256 amount
     ) internal {
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(
-            info.isSet,
-            "_withdrawAngel",
-            "Fountain: not added by angel"
-        );
+        _requireMsg(info.isSet, "_withdrawAngel", "not added by angel");
         angel.withdraw(info.pid, amount, user);
         info.totalBalance = info.totalBalance.sub(amount);
     }
@@ -322,21 +320,13 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         address to
     ) internal {
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(
-            info.isSet,
-            "_harvestAngel",
-            "Fountain: not added by angel"
-        );
+        _requireMsg(info.isSet, "_harvestAngel", "not added by angel");
         angel.harvest(info.pid, from, to);
     }
 
     function _emergencyWithdrawAngel(address user, IAngel angel) internal {
         AngelInfo storage info = _angelInfos[angel];
-        _requireMsg(
-            info.isSet,
-            "_emergencyAngel",
-            "Fountain: not added by angel"
-        );
+        _requireMsg(info.isSet, "_emergencyAngel", "not added by angel");
         uint256 amount = balanceOf(user);
         angel.emergencyWithdraw(info.pid, user);
         info.totalBalance = info.totalBalance.sub(amount);
@@ -345,7 +335,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     function _joinAngel(IAngel angel, address user) internal {
         IAngel[] storage angels = _joinedAngels[user];
         for (uint256 i = 0; i < angels.length; i++) {
-            _requireMsg(angels[i] != angel, "_joinAngel", "Angel joined");
+            _requireMsg(angels[i] != angel, "_joinAngel", "angel joined");
         }
         angels.push(angel);
 
@@ -369,10 +359,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
                 }
             }
         }
-        _requireMsg(
-            angels.length != len,
-            "_quitAngel",
-            "Fountain: unjoined angel"
-        );
+        _requireMsg(angels.length != len, "_quitAngel", "unjoined angel");
     }
 }

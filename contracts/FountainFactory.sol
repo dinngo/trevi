@@ -21,11 +21,6 @@ contract FountainFactory is ErrorMsg {
     }
 
     // Getters
-    /// @notice Return contract name for error message.
-    function getContractName() public pure override returns (string memory) {
-        return "FountainFactory";
-    }
-
     /// @notice Check if fountain is valid.
     /// @param fountain The fountain to be verified.
     /// @return Is valid or not.
