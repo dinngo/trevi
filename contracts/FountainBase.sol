@@ -69,7 +69,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     /// @return The total balance deposited in angel.
     function angelInfo(IAngel angel) external view returns (uint256, uint256) {
         AngelInfo storage info = _angelInfos[angel];
-        //_requireMsg(info.isSet, "angelInfo", "angel not set");
+        _requireMsg(info.isSet, "angelInfo", "angel not set");
         return (info.pid, info.totalBalance);
     }
 
@@ -105,14 +105,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         emit Deposit(_msgSender(), balance, _msgSender());
     }
 
-    function _deposit(uint256 amount) internal returns (uint256) {
-        uint256 balance = stakingToken.balanceOf(address(this));
-        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
-        balance = stakingToken.balanceOf(address(this)) - balance;
-
-        return balance;
-    }
-
     // User action
     /// @notice User may deposit their lp token for others. FTN token will be minted.
     /// Fountain will call angel's deposit to update user information, but the tokens
@@ -139,16 +131,6 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         // Burn token
         _burn(_msgSender(), balance);
         emit Withdraw(_msgSender(), balance, _msgSender());
-    }
-
-    function _withdraw(uint256 amount, address to) internal returns (uint256) {
-        // Withdraw entire balance if amount == UINT256_MAX
-        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
-        uint256 balance = stakingToken.balanceOf(address(this));
-        stakingToken.safeTransfer(to, amount);
-        balance = balance - stakingToken.balanceOf(address(this));
-
-        return balance;
     }
 
     /// @notice User may withdraw their lp token. FTN token will be burned.
@@ -288,6 +270,28 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
                 _depositAngel(to, angel, amount);
             }
         }
+    }
+
+    /// @notice Return the actual token amount deposited to Fountain to prevent
+    /// inconsistency of desired amount and transferred amount.
+    function _deposit(uint256 amount) internal returns (uint256) {
+        uint256 balance = stakingToken.balanceOf(address(this));
+        stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
+        balance = stakingToken.balanceOf(address(this)) - balance;
+
+        return balance;
+    }
+
+    /// @notice Return the actual token amount withdrawn from Fountain to prevent
+    /// inconsistency of desired amount and transferred amount.
+    function _withdraw(uint256 amount, address to) internal returns (uint256) {
+        // Withdraw entire balance if amount == UINT256_MAX
+        amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
+        uint256 balance = stakingToken.balanceOf(address(this));
+        stakingToken.safeTransfer(to, amount);
+        balance = balance - stakingToken.balanceOf(address(this));
+
+        return balance;
     }
 
     /// @notice The total staked amount should be updated in angelInfo when
