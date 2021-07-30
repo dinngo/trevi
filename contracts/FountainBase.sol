@@ -277,9 +277,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
     function _deposit(uint256 amount) internal returns (uint256) {
         uint256 balance = stakingToken.balanceOf(address(this));
         stakingToken.safeTransferFrom(_msgSender(), address(this), amount);
-        balance = stakingToken.balanceOf(address(this)) - balance;
-
-        return balance;
+        return stakingToken.balanceOf(address(this)).sub(balance);
     }
 
     /// @notice Return the actual token amount withdrawn from Fountain to prevent
@@ -289,9 +287,7 @@ abstract contract FountainBase is FountainToken, ReentrancyGuard, ErrorMsg {
         amount = amount == type(uint256).max ? balanceOf(_msgSender()) : amount;
         uint256 balance = stakingToken.balanceOf(address(this));
         stakingToken.safeTransfer(to, amount);
-        balance = balance - stakingToken.balanceOf(address(this));
-
-        return balance;
+        return balance.sub(stakingToken.balanceOf(address(this)));
     }
 
     /// @notice The total staked amount should be updated in angelInfo when
