@@ -3,8 +3,6 @@
 pragma solidity 0.6.12;
 
 abstract contract ErrorMsg {
-    function getContractName() public pure virtual returns (string memory);
-
     function _requireMsg(
         bool condition,
         string memory functionName,
@@ -24,17 +22,7 @@ abstract contract ErrorMsg {
         internal
         pure
     {
-        revert(
-            string(
-                abi.encodePacked(
-                    getContractName(),
-                    "_",
-                    functionName,
-                    ": ",
-                    reason
-                )
-            )
-        );
+        revert(string(abi.encodePacked(functionName, ": ", reason)));
     }
 
     function _revertMsg(string memory functionName) internal pure {

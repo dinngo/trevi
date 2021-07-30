@@ -27,11 +27,6 @@ contract Archangel is Ownable, ErrorMsg {
     }
 
     // Getters
-    /// @notice Return contract name for error message.
-    function getContractName() public pure override returns (string memory) {
-        return "Archangel";
-    }
-
     /// @notice Get the fountain for given token.
     /// @param token The token to be queried.
     /// @return Fountain address.
