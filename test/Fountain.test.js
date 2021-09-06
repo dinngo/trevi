@@ -1144,7 +1144,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         await this.stkToken.approve(this.fountain.address, ether('10'), {
           from: someone,
         });
-        await this.fountain.joinAngel(this.angel1.address, { from: someone });
+        await this.fountain.joinAngel(this.angel1.address, {
+          from: someone,
+        });
         await this.fountain.deposit(ether('1'), { from: someone });
         expect(await this.angel1.lpToken.call(new BN('0'))).to.be.equal(
           this.stkToken.address
@@ -1468,7 +1470,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         const stkTokenUser = await this.stkToken.balanceOf.call(user);
         // user emergency withdraw
-        const receipt = await this.fountain.emergencyWithdraw({ from: user });
+        const receipt = await this.fountain.emergencyWithdraw({
+          from: user,
+        });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
         expectEvent.inTransaction(
           receipt.receipt.transactionHash,
@@ -1509,7 +1513,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
         const pendingBefore = await this.angel1.pendingGrace.call(pid, user);
         const stkTokenUser = await this.stkToken.balanceOf.call(user);
         // user emergency withdraw
-        const receipt = await this.fountain.emergencyWithdraw({ from: user });
+        const receipt = await this.fountain.emergencyWithdraw({
+          from: user,
+        });
         expectEvent(receipt, 'EmergencyWithdraw', [user, depositAmount, user]);
         expectEvent.inTransaction(
           receipt.receipt.transactionHash,
@@ -1549,7 +1555,9 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           { from: rewarder }
         );
         // join angel
-        await this.dflFountain.joinAngel(this.angel1.address, { from: user });
+        await this.dflFountain.joinAngel(this.angel1.address, {
+          from: user,
+        });
         // user deposit
         await this.dflToken.approve(this.dflFountain.address, depositAmount, {
           from: user,
@@ -1669,13 +1677,17 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
       describe('transfer', function() {
         it('normal', async function() {
-          await this.fountain.transfer(someone, depositAmount, { from: user });
+          await this.fountain.transfer(someone, depositAmount, {
+            from: user,
+          });
         });
       });
 
       describe('transfer from', function() {
         it('normal', async function() {
-          await this.fountain.approve(someone, depositAmount, { from: user });
+          await this.fountain.approve(someone, depositAmount, {
+            from: user,
+          });
           await this.fountain.transferFrom(user, someone, depositAmount, {
             from: someone,
           });
@@ -1767,110 +1779,38 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
 
     describe('flashLoan', function() {
       beforeEach(async function() {
-        const depositAmount = ether('1000');
         this.borrower = await FlashBorrower.new();
-        await this.stkToken.approve(this.fountain.address, depositAmount, {
-          from: user,
-        });
-        await this.fountain.deposit(depositAmount, { from: user });
-        await this.archangel.setFlashLoanFee(
-          this.fountain.address,
-          new BN('100'),
-          { from: owner }
-        );
       });
 
-      it('normal', async function() {
-        const fee = ether('1');
-        const multiplier = new BN('100');
-        const collector = this.archangel.address;
-        await this.stkToken.approve(this.borrower.address, fee, {
-          from: user,
-        });
-        const tokenUserBefore = await this.stkToken.balanceOf.call(user);
-        const tokenLenderBefore = await this.stkToken.balanceOf.call(
-          this.fountain.address
-        );
-        const tokenCollectorBefore = await this.stkToken.balanceOf.call(
-          collector
-        );
-        await this.borrower.go(
-          this.fountain.address,
-          this.stkToken.address,
-          fee,
-          multiplier,
-          {
+      describe('normal token', async function() {
+        beforeEach(async function() {
+          const depositAmount = ether('1000');
+          await this.stkToken.approve(this.fountain.address, depositAmount, {
             from: user,
-          }
-        );
-        const tokenUserAfter = await this.stkToken.balanceOf.call(user);
-        const tokenLenderAfter = await this.stkToken.balanceOf.call(
-          this.fountain.address
-        );
-        const tokenCollectorAfter = await this.stkToken.balanceOf.call(
-          collector
-        );
-        const tokenOwnerAfter = await this.stkToken.balanceOf.call(owner);
-        expect(tokenUserAfter.sub(tokenUserBefore)).to.be.bignumber.eq(
-          ether('0').sub(fee)
-        );
-        expect(tokenLenderAfter.sub(tokenLenderBefore)).to.be.bignumber.eq(fee);
-        expect(
-          tokenCollectorAfter.sub(tokenCollectorBefore)
-        ).to.be.bignumber.eq(ether('0'));
-        const receipt = await this.archangel.rescueERC20(
-          this.stkToken.address,
-          this.fountain.address,
-          { from: owner }
-        );
-        const tokenLenderFinal = await this.stkToken.balanceOf.call(
-          this.fountain.address
-        );
-        const tokenCollectorFinal = await this.stkToken.balanceOf.call(
-          collector
-        );
-        const tokenOwnerFinal = await this.stkToken.balanceOf.call(owner);
-        expect(tokenLenderFinal.sub(tokenLenderAfter)).to.be.bignumber.eq(
-          ether('0').sub(fee)
-        );
-        expect(tokenCollectorFinal.sub(tokenCollectorAfter)).to.be.bignumber.eq(
-          ether('0')
-        );
-        expect(tokenOwnerFinal.sub(tokenOwnerAfter)).to.be.bignumber.eq(fee);
-      });
-
-      it('different token', async function() {
-        const fee = ether('1');
-        const multiplier = new BN('100');
-        const collector = this.archangel.address;
-        const token = await SimpleToken.new('Token', 'TKN', ether('10000'));
-        await token.transfer(user, fee);
-        await token.approve(this.borrower.address, fee, {
-          from: user,
-        });
-        await expectRevert(
-          this.borrower.go(
+          });
+          await this.fountain.deposit(depositAmount, { from: user });
+          await this.archangel.setFlashLoanFee(
             this.fountain.address,
-            token.address,
-            fee,
-            multiplier,
-            {
-              from: user,
-            }
-          ),
-          'wrong token'
-        );
-      });
-
-      it('insufficient fee', async function() {
-        const fee = ether('1');
-        const multiplier = new BN('1000');
-        const collector = this.archangel.address;
-        await this.stkToken.approve(this.borrower.address, fee, {
-          from: user,
+            new BN('100'),
+            { from: owner }
+          );
         });
-        await expectRevert(
-          this.borrower.go(
+
+        it('normal', async function() {
+          const fee = ether('1');
+          const multiplier = new BN('100');
+          const collector = this.archangel.address;
+          await this.stkToken.approve(this.borrower.address, fee, {
+            from: user,
+          });
+          const tokenUserBefore = await this.stkToken.balanceOf.call(user);
+          const tokenLenderBefore = await this.stkToken.balanceOf.call(
+            this.fountain.address
+          );
+          const tokenCollectorBefore = await this.stkToken.balanceOf.call(
+            collector
+          );
+          await this.borrower.go(
             this.fountain.address,
             this.stkToken.address,
             fee,
@@ -1878,9 +1818,131 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
             {
               from: user,
             }
-          ),
-          'transfer amount exceeds balance'
-        );
+          );
+          const tokenUserAfter = await this.stkToken.balanceOf.call(user);
+          const tokenLenderAfter = await this.stkToken.balanceOf.call(
+            this.fountain.address
+          );
+          const tokenCollectorAfter = await this.stkToken.balanceOf.call(
+            collector
+          );
+          const tokenOwnerAfter = await this.stkToken.balanceOf.call(owner);
+          expect(tokenUserAfter.sub(tokenUserBefore)).to.be.bignumber.eq(
+            ether('0').sub(fee)
+          );
+          expect(tokenLenderAfter.sub(tokenLenderBefore)).to.be.bignumber.eq(
+            fee
+          );
+          expect(
+            tokenCollectorAfter.sub(tokenCollectorBefore)
+          ).to.be.bignumber.eq(ether('0'));
+          const receipt = await this.archangel.rescueERC20(
+            this.stkToken.address,
+            this.fountain.address,
+            { from: owner }
+          );
+          const tokenLenderFinal = await this.stkToken.balanceOf.call(
+            this.fountain.address
+          );
+          const tokenCollectorFinal = await this.stkToken.balanceOf.call(
+            collector
+          );
+          const tokenOwnerFinal = await this.stkToken.balanceOf.call(owner);
+          expect(tokenLenderFinal.sub(tokenLenderAfter)).to.be.bignumber.eq(
+            ether('0').sub(fee)
+          );
+          expect(
+            tokenCollectorFinal.sub(tokenCollectorAfter)
+          ).to.be.bignumber.eq(ether('0'));
+          expect(tokenOwnerFinal.sub(tokenOwnerAfter)).to.be.bignumber.eq(fee);
+        });
+
+        it('different token', async function() {
+          const fee = ether('1');
+          const multiplier = new BN('100');
+          const collector = this.archangel.address;
+          const token = await SimpleToken.new('Token', 'TKN', ether('10000'));
+          await token.transfer(user, fee);
+          await token.approve(this.borrower.address, fee, {
+            from: user,
+          });
+          await expectRevert(
+            this.borrower.go(
+              this.fountain.address,
+              token.address,
+              fee,
+              multiplier,
+              {
+                from: user,
+              }
+            ),
+            'wrong token'
+          );
+        });
+
+        it('insufficient fee', async function() {
+          const fee = ether('1');
+          const multiplier = new BN('1000');
+          const collector = this.archangel.address;
+          await this.stkToken.approve(this.borrower.address, fee, {
+            from: user,
+          });
+          await expectRevert(
+            this.borrower.go(
+              this.fountain.address,
+              this.stkToken.address,
+              fee,
+              multiplier,
+              {
+                from: user,
+              }
+            ),
+            'transfer amount exceeds balance'
+          );
+        });
+      });
+
+      describe('deflationary token', async function() {
+        beforeEach(async function() {
+          const depositAmount = ether('1000');
+          await this.dflToken.approve(this.dflFountain.address, depositAmount, {
+            from: user,
+          });
+          await this.dflFountain.deposit(depositAmount, { from: user });
+          await this.archangel.setFlashLoanFee(
+            this.dflFountain.address,
+            new BN('100'),
+            { from: owner }
+          );
+        });
+
+        it('should revert on deflationary token', async function() {
+          const fee = ether('1');
+          const multiplier = new BN('10');
+          const collector = this.archangel.address;
+          await this.dflToken.approve(this.borrower.address, fee, {
+            from: user,
+          });
+          const tokenUserBefore = await this.dflToken.balanceOf.call(user);
+          const tokenLenderBefore = await this.dflToken.balanceOf.call(
+            this.dflFountain.address
+          );
+          const tokenCollectorBefore = await this.dflToken.balanceOf.call(
+            collector
+          );
+          await expectRevert(
+            this.borrower.go(
+              this.dflFountain.address,
+              this.dflToken.address,
+              fee,
+              multiplier,
+              {
+                from: user,
+              }
+            ),
+            'balance decreased'
+          );
+        });
       });
     });
   });

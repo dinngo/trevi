@@ -14,7 +14,7 @@ contract FlashBorrower is IERC3156FlashBorrower {
         uint256 fee,
         bytes calldata data
     ) external override returns (bytes32) {
-        require(IERC20(token).balanceOf(address(this)) >= amount, "No borrow funds");
+        require(IERC20(token).balanceOf(address(this)) > 0, "No borrow funds");
         initiator;
         data;
         IERC20(token).approve(msg.sender, amount+fee);
