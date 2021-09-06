@@ -486,7 +486,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
                 ////////////////////////// New
                 // Delegate by fountain
                 // msg.sender,
-                to,
+                from,
                 to,
                 _pendingGrace,
                 user.amount
