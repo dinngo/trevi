@@ -1040,7 +1040,7 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
       });
     });
 
-    describe.only('harvest', function() {
+    describe('harvest', function() {
       const depositAmount = ether('10');
       const pid = new BN('0');
       beforeEach(async function() {
