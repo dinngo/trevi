@@ -36,8 +36,11 @@ contract AngelFactory is ErrorMsg {
         return _rewards[angel];
     }
 
-    /// @notice Create the angel of given token as reward. Multiple angels for the
-    /// same token is possible.
+    /// @notice Create the angel of given token as reward. Multiple angels for
+    /// the same token is possible. Notice that angel with tokens that has
+    /// floating amount (including Inflationary/Deflationary tokens, Interest
+    /// tokens, Rebase tokens), might leads to error according to the design
+    /// policy of angel.
     function create(IERC20 reward) external returns (Angel) {
         _requireMsg(
             address(reward) != address(0),

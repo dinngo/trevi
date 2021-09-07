@@ -35,7 +35,10 @@ contract FountainFactory is ErrorMsg {
         return _fountains[token];
     }
 
-    /// @notice Create Fountain for token.
+    /// @notice Create Fountain for token. Notice that fountain with tokens that
+    /// has floating amount (including Inflationary/Deflationary tokens, Interest
+    /// tokens, Rebase tokens), might leads to error according to the design
+    /// policy of fountain.
     /// @param token The token address to be created.
     /// @return The created fountain.
     function create(ERC20 token) external returns (Fountain) {

@@ -19,7 +19,7 @@ contract ERC20FlashLoan is IFlashLender {
         keccak256("ERC3156FlashBorrower.onFlashLoan");
 
     constructor(IERC20 token, uint256 fee) public {
-        require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
+        require(fee <= FEE_BASE, "fee rate exceeded");
         lendingToken = token;
         flashLoanFee = fee;
     }
@@ -53,7 +53,7 @@ contract ERC20FlashLoan is IFlashLender {
         override
         returns (uint256)
     {
-        require(token == address(lendingToken), "ERC20FlashLoan: wrong token");
+        require(token == address(lendingToken), "wrong token");
         // The fee will be rounded half up
         return (amount.mul(flashLoanFee).add(FEE_BASE_OFFSET)).div(FEE_BASE);
     }
@@ -71,20 +71,21 @@ contract ERC20FlashLoan is IFlashLender {
         uint256 amount,
         bytes calldata data
     ) external override returns (bool) {
+        uint256 balance = IERC20(token).balanceOf(address(this));
         uint256 fee = flashFee(token, amount);
         // send token to receiver
         lendingToken.safeTransfer(address(receiver), amount);
         require(
             receiver.onFlashLoan(msg.sender, token, amount, fee, data) ==
                 _RETURN_VALUE,
-            "ERC20FlashLoan: invalid return value"
+            "invalid return value"
         );
         uint256 currentAllowance =
             lendingToken.allowance(address(receiver), address(this));
         uint256 totalDebt = amount.add(fee);
         require(
             currentAllowance >= totalDebt,
-            "ERC20FlashLoan: allowance does not allow refund"
+            "allowance does not allow refund"
         );
         // get token from receiver
         lendingToken.safeTransferFrom(
@@ -94,6 +95,10 @@ contract ERC20FlashLoan is IFlashLender {
         );
         address collector = flashLoanFeeCollector();
         if (collector != address(0)) lendingToken.safeTransfer(collector, fee);
+        require(
+            IERC20(token).balanceOf(address(this)) >= balance,
+            "balance decreased"
+        );
 
         return true;
     }
@@ -110,7 +115,7 @@ contract ERC20FlashLoan is IFlashLender {
     }
 
     function setFlashLoanFee(uint256 fee) public virtual override {
-        require(fee <= FEE_BASE, "ERC20FlashLoan: fee rate exceeded");
+        require(fee <= FEE_BASE, "fee rate exceeded");
         flashLoanFee = fee;
     }
 }

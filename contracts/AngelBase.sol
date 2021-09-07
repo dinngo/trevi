@@ -486,7 +486,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
                 ////////////////////////// New
                 // Delegate by fountain
                 // msg.sender,
-                to,
+                from,
                 to,
                 _pendingGrace,
                 user.amount
@@ -524,7 +524,7 @@ contract AngelBase is BoringOwnable, BoringBatchable, ErrorMsg {
             try
                 _rewarder.onGraceReward{gas: 1000000}(pid, to, to, 0, 0)
             {} catch {
-                return;
+                // Do nothing
             }
         }
 
