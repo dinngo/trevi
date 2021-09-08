@@ -1480,6 +1480,12 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           'EmergencyWithdraw',
           [user, pid, depositAmount, user]
         );
+        expectEvent.inTransaction(
+          receipt.receipt.transactionHash,
+          this.angel1,
+          'RewarderExecFail',
+          [this.badRewarder.address, pid, user]
+        );
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
         const pending = await this.angel1.pendingGrace.call(pid, user);
@@ -1522,6 +1528,12 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           this.angel1,
           'EmergencyWithdraw',
           [user, pid, depositAmount, user]
+        );
+        expectEvent.inTransaction(
+          receipt.receipt.transactionHash,
+          this.angel1,
+          'RewarderExecFail',
+          [this.gasRewarder.address, pid, user]
         );
         expect(new BN(receipt.receipt.gasUsed)).to.be.bignumber.lt(
           new BN('1500000')
@@ -1593,6 +1605,12 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           'EmergencyWithdraw',
           [user, pid, actualAmount, user]
         );
+        expectEvent.inTransaction(
+          receipt.receipt.transactionHash,
+          this.angel1,
+          'RewarderExecFail',
+          [this.badRewarder.address, pid, user]
+        );
         // check joined angel user balance
         const info1 = await this.angel1.userInfo.call(pid, user);
         const pending = await this.angel1.pendingGrace.call(pid, user);
@@ -1635,6 +1653,12 @@ contract('Fountain', function([_, user, someone, rewarder, owner]) {
           this.angel1,
           'EmergencyWithdraw',
           [user, pid, actualAmount, user]
+        );
+        expectEvent.inTransaction(
+          receipt.receipt.transactionHash,
+          this.angel1,
+          'RewarderExecFail',
+          [this.gasRewarder.address, pid, user]
         );
         expect(new BN(receipt.receipt.gasUsed)).to.be.bignumber.lt(
           new BN('1500000')
