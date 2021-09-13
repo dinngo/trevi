@@ -274,7 +274,7 @@ contract('Angel', function([_, user, rewarder]) {
       await this.angel.set(0, 0, this.rewarder.address, false, {
         from: rewarder,
       });
-      expect(await this.angel.totalAllocPoint.call()).to.be.zero;
+      expect(await this.angel.totalAllocPoint.call()).to.be.bignumber.zero;
       await increase(seconds(86400));
       // will revert if AngelBase do not check pool.allocPoint > 0
       await this.angel.pendingGrace.call(new BN('0'), user);
@@ -599,7 +599,7 @@ contract('Angel', function([_, user, rewarder]) {
         // Calculate rewards from reallocate to latest
         let expectedGrace2 = ether('0');
         expectEqWithinBps(pendingGrace, expectedGrace.add(expectedGrace2));
-        expect(await this.angel.gracePerSecond.call()).to.be.zero;
+        expect(await this.angel.gracePerSecond.call()).to.be.bignumber.zero;
       });
     });
   });

@@ -4,7 +4,7 @@ Trevi is an ERC20-based staking system. It enables users to stake their token an
 
 ![](images/Trevi-01.png)
 
-Anyone can create Fountain for a token through Fountain factory. Anyone can create Angel to run their own rewarding program through Angel factory.
+Anyone can create Fountain for a token through Fountain factory. Anyone can create Angel to run their own rewarding program through Angel factory. **AVOID USING TOKENS THAT HAS FLOATING AMOUNT** (including Inflationary/Deflationary tokens, Interest tokens, Rebase tokens), which might leads to error according to the design policy.
 
 The interaction between a user and Fountain can be divided into two groups
 
