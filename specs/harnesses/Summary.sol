@@ -50,4 +50,20 @@ contract Summary {
         }
     }
 
+    // Rewarder
+    function onGraceReward(
+        uint256 pid,
+        address user,
+        address recipient,
+        uint256 graceAmount,
+        uint256 newLpAmount
+    ) external {
+        havocDummyToken();
+    }
+
+    // Archangel
+    function getFountain(address) external returns (address) {
+        return msg.sender;
+    }
+
 }
