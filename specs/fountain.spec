@@ -46,7 +46,7 @@ methods {
         address recipient,
         uint256 graceAmount,
         uint256 newLpAmount
-    ) => NONDET
+    ) => HAVOC_ALL
 }
 
 definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
@@ -79,8 +79,6 @@ rule emergencyWithdrawShouldAlwaysSuccess() {
     require someToken.balanceOf(fountain) >= fountain.balanceOf(e1.msg.sender);
     require fountain.totalSupply() >= fountain.balanceOf(e1.msg.sender);
     fountain.deposit(e1, depositAmount);
-
-    // require fountain._status() != 2; // only run not-yet-entered case
 
     env e2;
     require e2.msg.sender == e1.msg.sender;
