@@ -46,11 +46,12 @@ methods {
         address recipient,
         uint256 graceAmount,
         uint256 newLpAmount
-    ) => HAVOC_ALL
+    ) => NONDET
 }
 
 definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
+/* ********* SKIP FOR NOW ******** */ 
 // rule ftnTokenSupplyNoGreaterThanUnderlyingToken(method f) {
 //     //used to restric func to test, should remove after testing
 //     require f.selector == fountain.deposit(uint256).selector;
@@ -70,23 +71,40 @@ definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 //     assert (ftnBefore <= underlyingBefore) => (ftnAfter <= underlyingAfter);
 // }
 
-rule emergencyWithdrawShouldAlwaysSuccess() {
-    env e1;
-    uint256 depositAmount;
-    require e1.msg.sender != 0; // 0 is reserved for minting/burning so we exclude it.
-    require e1.msg.sender != fountain;
-    require e1.msg.sender != angel;
-    require someToken.balanceOf(fountain) >= fountain.balanceOf(e1.msg.sender);
-    require fountain.totalSupply() >= fountain.balanceOf(e1.msg.sender);
-    fountain.deposit(e1, depositAmount);
+/* ********* ALREADY PASS ******** */ 
+// rule emergencyWithdrawShouldAlwaysSuccess() {
+//     env e1;
+//     uint256 depositAmount;
+//     require e1.msg.sender != 0; // 0 is reserved for minting/burning so we exclude it.
+//     require e1.msg.sender != fountain;
+//     require e1.msg.sender != angel;
+//     require someToken.balanceOf(fountain) >= fountain.balanceOf(e1.msg.sender);
+//     require fountain.totalSupply() >= fountain.balanceOf(e1.msg.sender);
+//     fountain.deposit(e1, depositAmount);
 
-    env e2;
-    require e2.msg.sender == e1.msg.sender;
-    require e2.msg.value == 0; // function is non-payable
-    require (someToken.balanceOf(fountain) + someToken.balanceOf(e2.msg.sender)) <= MAX_UINT256();
-    fountain.emergencyWithdraw@withrevert(e2);
+//     env e2;
+//     require e2.msg.sender == e1.msg.sender;
+//     require e2.msg.value == 0; // function is non-payable
+//     require (someToken.balanceOf(fountain) + someToken.balanceOf(e2.msg.sender)) <= MAX_UINT256();
+//     fountain.emergencyWithdraw@withrevert(e2);
 
-    assert !lastReverted;
+//     assert !lastReverted;
+// }
+
+rule poolIdCannotChangeOnceSet(method f, address angel) {
+    require !f.isView;
+
+    uint256 pidBefore;
+    uint256 pidAfter;
+    uint256 nonUsed;
+
+    pidBefore, nonUsed = fountain.angelInfo(angel);
+
+    arbitrary(f);
+
+    pidAfter, nonUsed = fountain.angelInfo(angel);
+
+    assert (pidBefore != 0) => (pidAfter == pidBefore);
 }
 
 
