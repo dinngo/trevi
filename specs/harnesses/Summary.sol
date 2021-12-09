@@ -5,6 +5,7 @@ import "./DummyERC20A.sol";
 interface IERC20WithDummyFunctionality {
     function transfer(address to, uint amt) external;
     function transferFrom(address from, address to, uint amt) external;
+    function approve(address spender, uint256 amount) external;
     function balanceOf(address who) external returns (uint);
     function allowance(address a, address b) external returns (uint);
     function havocMe(address proxy) external;
@@ -35,6 +36,7 @@ contract Summary {
     address faucet;
     uint someAmount;
     uint someAmount2;
+    address fountainAddress;
 
     function havocDummyToken() private {
         if (erc20A.allowance(msg.sender, address(this)) > 0) {
@@ -50,6 +52,11 @@ contract Summary {
         }
     }
 
+    // Used to set fountain address in spec which will be used in `onlyFountain` modifier in Angel
+    function setFountainAddress(address _fountain) external {
+        fountainAddress = _fountain;
+    }
+
     // Rewarder
     function onGraceReward(
         uint256 pid,
@@ -63,7 +70,22 @@ contract Summary {
 
     // Archangel
     function getFountain(address) external returns (address) {
-        return msg.sender;
+        return fountainAddress;
+    }
+
+    // FlashBorrower
+    function onFlashLoan(
+        address initiator,
+        address token,
+        uint256 amount,
+        uint256 fee,
+        bytes calldata data
+    ) external returns (bytes32) {
+        require(IERC20WithDummyFunctionality(token).balanceOf(address(this)) >= amount, "No borrow funds");
+        erc20A = IERC20WithDummyFunctionality(token);
+        havocDummyToken();
+        IERC20WithDummyFunctionality(token).approve(msg.sender, amount+fee);
+        return keccak256("ERC3156FlashBorrower.onFlashLoan");
     }
 
 }

@@ -18,9 +18,9 @@ methods {
     transfer(address,uint256) => DISPATCHER(true)
     transferFrom(address,address,uint256) => DISPATCHER(true)
     approve(address,uint256) => DISPATCHER(true)
-    allowance(address,address) returns (uint) envfree => DISPATCHER(true)
-    balanceOf(address) returns (uint) envfree => DISPATCHER(true)
-    // totalSupply() returns (uint) envfree => DISPATCHER(true)
+    allowance(address,address) returns (uint) => DISPATCHER(true)
+    balanceOf(address) returns (uint) => DISPATCHER(true)
+    // totalSupply() returns (uint) => DISPATCHER(true)
 
     havocMe(address) => DISPATCHER(true)
     havocMeEth() => DISPATCHER(true)
@@ -28,6 +28,11 @@ methods {
     someToken.balanceOf(address) returns (uint) envfree
     someToken.allowance(address,address) returns (uint) envfree
     someToken2.balanceOf(address) returns (uint) envfree
+    someToken2.allowance(address,address) returns (uint) envfree
+
+    // Summary
+    setFountainAddress(address) => DISPATCHER(true)
+    summaryInstance.setFountainAddress(address) envfree
 
     // Angel
     deposit(uint256 pid, uint256 amount, address to) => DISPATCHER(true)
@@ -47,52 +52,65 @@ methods {
         uint256 graceAmount,
         uint256 newLpAmount
     ) => NONDET
+
+    // FlashBorrower
+    onFlashLoan(
+        address initiator,
+        address token,
+        uint256 amount,
+        uint256 fee,
+        bytes data
+    ) returns (bytes32) => DISPATCHER(true)
 }
 
 definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
-/* ********* SKIP FOR NOW ******** */ 
-// rule ftnTokenSupplyNoGreaterThanUnderlyingToken(method f) {
-//     //used to restric func to test, should remove after testing
-//     require f.selector == fountain.deposit(uint256).selector;
-//     // require f.isView;
+/* ********* ALREADY PASS except some FunctionFinders ******** */ 
+rule ftnTokenSupplyNoGreaterThanUnderlyingToken(method f) {
+    require !f.isView;
+    summaryInstance.setFountainAddress(fountain);
 
-//     require someToken != fountain;
-//     require someToken == stakingToken();
+    uint256 ftnBefore = fountain.totalSupply();
+    uint256 underlyingBefore = someToken.balanceOf(fountain);
 
-//     uint256 ftnBefore = fountain.totalSupply();
-//     uint256 underlyingBefore = someToken.balanceOf(fountain);
+    arbitrary(f);
 
-//     arbitrary(f);
+    uint256 ftnAfter = fountain.totalSupply();
+    uint256 underlyingAfter = someToken.balanceOf(fountain);
 
-//     uint256 ftnAfter = fountain.totalSupply();
-//     uint256 underlyingAfter = someToken.balanceOf(fountain);
-
-//     assert (ftnBefore <= underlyingBefore) => (ftnAfter <= underlyingAfter);
-// }
+    assert (ftnBefore <= underlyingBefore) => (ftnAfter <= underlyingAfter);
+}
 
 /* ********* ALREADY PASS ******** */ 
-// rule emergencyWithdrawShouldAlwaysSuccess() {
-//     env e1;
-//     uint256 depositAmount;
-//     require e1.msg.sender != 0; // 0 is reserved for minting/burning so we exclude it.
-//     require e1.msg.sender != fountain;
-//     require e1.msg.sender != angel;
-//     require someToken.balanceOf(fountain) >= fountain.balanceOf(e1.msg.sender);
-//     require fountain.totalSupply() >= fountain.balanceOf(e1.msg.sender);
-//     fountain.deposit(e1, depositAmount);
+rule emergencyWithdrawShouldAlwaysSuccess(method f) {
+    require !f.isView;
+    summaryInstance.setFountainAddress(fountain);
+    
+    env e1;
+    uint256 depositAmount;
+    require e1.msg.sender != 0; // 0 is reserved for minting/burning so we exclude it.
+    require e1.msg.sender != fountain;
+    require e1.msg.sender != angel;
+    require someToken.balanceOf(fountain) >= fountain.balanceOf(e1.msg.sender);
+    require fountain.totalSupply() >= fountain.balanceOf(e1.msg.sender);
+    fountain.deposit(e1, depositAmount);
 
-//     env e2;
-//     require e2.msg.sender == e1.msg.sender;
-//     require e2.msg.value == 0; // function is non-payable
-//     require (someToken.balanceOf(fountain) + someToken.balanceOf(e2.msg.sender)) <= MAX_UINT256();
-//     fountain.emergencyWithdraw@withrevert(e2);
+    // will timeout if we include this
+    // arbitrary(f);
 
-//     assert !lastReverted;
-// }
+    env e2;
+    require e2.msg.sender == e1.msg.sender;
+    require e2.msg.value == 0; // function is non-payable
+    require (someToken.balanceOf(fountain) + someToken.balanceOf(e2.msg.sender)) <= MAX_UINT256();
+    fountain.emergencyWithdraw@withrevert(e2);
 
+    assert !lastReverted;
+}
+
+/* ********* ALREADY PASS (havoc) ******** */ 
 rule poolIdCannotChangeOnceSet(method f, address angel) {
     require !f.isView;
+    summaryInstance.setFountainAddress(fountain);
 
     uint256 pidBefore;
     uint256 pidAfter;
@@ -105,6 +123,27 @@ rule poolIdCannotChangeOnceSet(method f, address angel) {
     pidAfter, nonUsed = fountain.angelInfo(angel);
 
     assert (pidBefore != 0) => (pidAfter == pidBefore);
+}
+
+/* ********* ALREADY PASS (havoc) ******** */ 
+rule rageQuitShouldAlwaysSuccess(method f, address angel) {
+    require !f.isView;
+    summaryInstance.setFountainAddress(fountain);
+
+    env e1;
+    require e1.msg.sender != 0; // 0 is reserved for minting/burning so we exclude it.
+    require e1.msg.sender != fountain;
+    require e1.msg.sender != angel;
+    fountain.joinAngel(e1, angel);
+
+    arbitrary(f);
+
+    env e2;
+    require e2.msg.sender == e1.msg.sender;
+    require e2.msg.value == 0; // function is non-payable
+    rageQuitAngel@withrevert(e2, angel);
+
+    assert !lastReverted;
 }
 
 
