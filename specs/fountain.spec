@@ -6,11 +6,14 @@ using Summary as summaryInstance // general summary for DeFi protocols
 
 methods {
     // Fountain
-    totalSupply() returns (uint) envfree => DISPATCHER(true)
+    totalSupply() returns (uint) envfree
+    allowance(address,address) returns (uint) envfree
+    balanceOf(address) returns (uint) envfree
     stakingToken() returns (address) envfree
     angelInfo(address) envfree
     joinedAngel(address) returns (address[]) envfree
     _status() returns (uint) envfree => DISPATCHER(true)
+    hasJoinedAngel(address,address) returns (bool) envfree
     deposit(uint256) => DISPATCHER(true)
     emergencyWithdraw() => DISPATCHER(true)
 
@@ -20,7 +23,7 @@ methods {
     approve(address,uint256) => DISPATCHER(true)
     allowance(address,address) returns (uint) => DISPATCHER(true)
     balanceOf(address) returns (uint) => DISPATCHER(true)
-    // totalSupply() returns (uint) => DISPATCHER(true)
+    totalSupply() returns (uint) => DISPATCHER(true)
 
     havocMe(address) => DISPATCHER(true)
     havocMeEth() => DISPATCHER(true)
@@ -81,7 +84,7 @@ rule ftnTokenSupplyNoGreaterThanUnderlyingToken(method f) {
     assert (ftnBefore <= underlyingBefore) => (ftnAfter <= underlyingAfter);
 }
 
-/* ********* ALREADY PASS ******** */ 
+/* ********* Will fail when info.totalBalance less than totalSupply ******** */ 
 rule emergencyWithdrawShouldAlwaysSuccess(method f) {
     require !f.isView;
     summaryInstance.setFountainAddress(fountain);
@@ -125,8 +128,8 @@ rule poolIdCannotChangeOnceSet(method f, address angel) {
     assert (pidBefore != 0) => (pidAfter == pidBefore);
 }
 
-/* ********* ALREADY PASS (havoc) ******** */ 
-rule rageQuitShouldAlwaysSuccess(method f, address angel) {
+/* ********* ******** */ 
+rule rageQuitShouldAlwaysSuccess(method f) {
     require !f.isView;
     summaryInstance.setFountainAddress(fountain);
 
@@ -136,7 +139,9 @@ rule rageQuitShouldAlwaysSuccess(method f, address angel) {
     require e1.msg.sender != angel;
     fountain.joinAngel(e1, angel);
 
-    arbitrary(f);
+    // will behave weird and eaily timeout
+    // arbitrary(f);
+    // require fountain.hasJoinedAngel(e1.msg.sender, angel); // filter out the case that angel already quited by previous action
 
     env e2;
     require e2.msg.sender == e1.msg.sender;
