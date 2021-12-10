@@ -12,6 +12,8 @@ methods {
     totalAllocPoint() returns (uint256) envfree
     gracePerSecond() returns (uint256) envfree
     endTime() returns (uint256) envfree
+    lpTokenLength() returns (uint256) envfree
+    rewarderLength() returns (uint256) envfree
     deposit(uint256 pid, uint256 amount, address to) => DISPATCHER(true)
     withdraw(uint256 pid, uint256 amount, address to) => DISPATCHER(true)
     harvest(uint256 pid, address from, address to) => DISPATCHER(true)
@@ -95,6 +97,25 @@ rule stateChagneIffOwner(method f) {
     assert before_endTime == after_endTime;
     assert before_gracePerSecond == after_gracePerSecond;
     assert before_totalAllocPoint == after_totalAllocPoint;
+}
+
+/* ********* PASS execepts flashLoan (HAVOC_ECF) ******** */ 
+rule stateChagneIffOwner_lpToken(method f, uint256 i) {
+    summaryInstance.setFountainAddress(fountain);
+
+    uint256 before = angel.lpToken(i);
+    uint256 before_length = angel.lpTokenLength();
+
+    env e;
+    calldataarg arg;
+    require e.msg.sender != angel.owner();
+    f(e, arg);
+
+    uint256 after = angel.lpToken(i);
+    uint256 after_length = angel.lpTokenLength();
+
+    assert before == after;
+    assert before_length == after_length;
 }
 
 function arbitrary(method f) {
