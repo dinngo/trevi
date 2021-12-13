@@ -14,6 +14,7 @@ methods {
     endTime() returns (uint256) envfree
     lpTokenLength() returns (uint256) envfree
     rewarderLength() returns (uint256) envfree
+    poolLength() returns (uint256) envfree
     deposit(uint256 pid, uint256 amount, address to) => DISPATCHER(true)
     withdraw(uint256 pid, uint256 amount, address to) => DISPATCHER(true)
     harvest(uint256 pid, address from, address to) => DISPATCHER(true)
@@ -27,6 +28,7 @@ methods {
     // stakingToken() returns (address) envfree
     angelInfo(address) => DISPATCHER(true)
     fountain.angelInfo(address) envfree
+    setPoolId(uint256) => DISPATCHER(true)
     // joinedAngel(address) returns (address[]) envfree
     // _status() returns (uint) => DISPATCHER(true)
     // hasJoinedAngel(address,address) returns (bool) envfree => DISPATCHER(true)
@@ -76,6 +78,7 @@ methods {
 }
 
 definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+definition MAX_UINT128() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
 /* ********* ALREADY PASS (HAVOC_ECF) ******** */ 
 rule stateChagneIffOwner(method f) {
@@ -148,6 +151,30 @@ rule lpTokenCannotChangeOnceSet(method f, uint256 i) {
     address after = angel.lpToken(i);
 
     assert (before != 0) => (after == before);
+}
+
+/* ********* fail when the last substraction exceeds int256 max: (a-(-b)) > int256.max ******** */ 
+rule pendingGraceShouldAlwaysReturn(uint256 allocPoint, address rewarder) {
+    summaryInstance.setFountainAddress(fountain);
+    require angel.lpTokenLength() == angel.poolLength();
+
+    env e0;
+    angel.add(e0, allocPoint, someToken, rewarder);
+    env e1;
+    uint256 amount;
+    uint256 endTime;
+    angel.addGraceReward(e1, amount, endTime);
+    
+    uint256 len = angel.lpTokenLength();
+    require len > 0; // make sure lpToken array not overflow after new pool added
+
+    env e2;
+    uint256 pid = len - 1;
+    address user;
+    require e2.msg.value == 0;
+    angel.pendingGrace@withrevert(e2, pid, user);
+
+    assert !lastReverted;
 }
 
 function arbitrary(method f) {
