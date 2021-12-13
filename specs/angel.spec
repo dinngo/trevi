@@ -137,6 +137,19 @@ rule stateChagneIffOwner_rewarder(method f, uint256 i) {
     assert before_length == after_length;
 }
 
+/* ********* PASS (HAVOC_ECF) ******** */ 
+rule lpTokenCannotChangeOnceSet(method f, uint256 i) {
+    summaryInstance.setFountainAddress(fountain);
+
+    address before = angel.lpToken(i);
+
+    arbitrary(f);
+
+    address after = angel.lpToken(i);
+
+    assert (before != 0) => (after == before);
+}
+
 function arbitrary(method f) {
     env e__;
     calldataarg arg__;
