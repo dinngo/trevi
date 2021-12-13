@@ -99,7 +99,7 @@ rule stateChagneIffOwner(method f) {
     assert before_totalAllocPoint == after_totalAllocPoint;
 }
 
-/* ********* PASS execepts flashLoan (HAVOC_ECF) ******** */ 
+/* ********* PASS (HAVOC_ECF) ******** */ 
 rule stateChagneIffOwner_lpToken(method f, uint256 i) {
     summaryInstance.setFountainAddress(fountain);
 
@@ -113,6 +113,25 @@ rule stateChagneIffOwner_lpToken(method f, uint256 i) {
 
     uint256 after = angel.lpToken(i);
     uint256 after_length = angel.lpTokenLength();
+
+    assert before == after;
+    assert before_length == after_length;
+}
+
+/* ********* PASS (HAVOC_ECF) ******** */ 
+rule stateChagneIffOwner_rewarder(method f, uint256 i) {
+    summaryInstance.setFountainAddress(fountain);
+
+    uint256 before = angel.rewarder(i);
+    uint256 before_length = angel.rewarderLength();
+
+    env e;
+    calldataarg arg;
+    require e.msg.sender != angel.owner();
+    f(e, arg);
+
+    uint256 after = angel.rewarder(i);
+    uint256 after_length = angel.rewarderLength();
 
     assert before == after;
     assert before_length == after_length;
