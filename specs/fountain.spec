@@ -68,7 +68,7 @@ methods {
 
 definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
-/* ********* ALREADY PASS except some FunctionFinders ******** */ 
+/* ********* ALREADY PASS ******** */ 
 rule ftnTokenSupplyNoGreaterThanUnderlyingToken(method f) {
     require !f.isView;
     summaryInstance.setFountainAddress(fountain);
