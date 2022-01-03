@@ -73,7 +73,7 @@ definition MAX_UINT256() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 definition MAX_UINT128() returns uint256 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
 
 /* ********* ALREADY PASS (HAVOC_ECF) ******** */ 
-rule stateChagneIffOwner(method f) {
+rule stateChangeIffOwner(method f) {
     summaryInstance.setFountainAddress(fountain);
 
     uint256 before_endTime = angel.endTime();
@@ -95,7 +95,7 @@ rule stateChagneIffOwner(method f) {
 }
 
 /* ********* PASS (HAVOC_ECF) ******** */ 
-rule stateChagneIffOwner_lpToken(method f, uint256 i) {
+rule stateChangeIffOwner_lpToken(method f, uint256 i) {
     summaryInstance.setFountainAddress(fountain);
 
     uint256 before = angel.lpToken(i);
@@ -114,7 +114,7 @@ rule stateChagneIffOwner_lpToken(method f, uint256 i) {
 }
 
 /* ********* PASS (HAVOC_ECF) ******** */ 
-rule stateChagneIffOwner_rewarder(method f, uint256 i) {
+rule stateChangeIffOwner_rewarder(method f, uint256 i) {
     summaryInstance.setFountainAddress(fountain);
 
     uint256 before = angel.rewarder(i);

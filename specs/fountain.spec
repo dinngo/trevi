@@ -128,7 +128,7 @@ rule poolIdCannotChangeOnceSet(method f, address angel) {
     assert (pidBefore != 0) => (pidAfter == pidBefore);
 }
 
-/* ********* ******** */ 
+/* ********* ALREADY PASS ******** */ 
 rule rageQuitShouldAlwaysSuccess(method f) {
     require !f.isView;
     summaryInstance.setFountainAddress(fountain);
