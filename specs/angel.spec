@@ -21,19 +21,11 @@ methods {
     emergencyWithdraw(uint256 pid, address to) => DISPATCHER(true)
     rescueERC20(address token, uint256 amount, address to) => DISPATCHER(true)
 
-    // // Fountain
-    // totalSupply() returns (uint) envfree
-    // allowance(address,address) returns (uint) envfree
-    // balanceOf(address) returns (uint) envfree
-    // stakingToken() returns (address) envfree
+    // Fountain
     angelInfo(address) => DISPATCHER(true)
-    fountain.angelInfo(address) envfree
     setPoolId(uint256) => DISPATCHER(true)
-    // joinedAngel(address) returns (address[]) envfree
-    // _status() returns (uint) => DISPATCHER(true)
-    // hasJoinedAngel(address,address) returns (bool) envfree => DISPATCHER(true)
-    // deposit(uint256) => DISPATCHER(true)
-    // emergencyWithdraw() => DISPATCHER(true)
+
+    fountain.angelInfo(address) envfree
 
     // ERC20
     transfer(address,uint256) => DISPATCHER(true)

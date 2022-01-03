@@ -12,19 +12,6 @@ interface IERC20WithDummyFunctionality {
     function havocMeEth() external;
 }
 
-interface Nothing {
-    function nop() external payable;
-}
-
-interface WithEthAddress {
-    function ETH_ADDRESS() external returns (address);
-    function WETH() external returns (address);
-}
-
-interface IMakerGemJoin {
-    function gem() external returns(address);
-}
-
 // used to summarize different functions
 contract Summary {
 
