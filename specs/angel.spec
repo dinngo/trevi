@@ -145,7 +145,7 @@ rule lpTokenCannotChangeOnceSet(method f, uint256 i) {
     assert (before != 0) => (after == before);
 }
 
-/* ********* fail when the last substraction exceeds int256 max: (a-(-b)) > int256.max ******** */ 
+/* ********* fail when the last subtraction exceeds int256 max: (a-(-b)) > int256.max ******** */ 
 rule pendingGraceShouldAlwaysReturn(uint256 allocPoint, address rewarder) {
     summaryInstance.setFountainAddress(fountain);
     require angel.lpTokenLength() == angel.poolLength();
