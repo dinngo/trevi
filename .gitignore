@@ -8,7 +8,10 @@ build/
 
 # lol macs
 .DS_Store
-package-lock.json
 
 # secrets
 .secret_beta
+
+# certora
+.certora_*
+.last_confs
